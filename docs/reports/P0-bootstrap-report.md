@@ -14,7 +14,7 @@
 
 ## 1. 概述
 
-**一句话结论**：P0 基础设施已完成并收敛——三项 PR（#1 硬化、#2 Windows 长路径删除修复、#3 本报告与文档修正）中 #1/#2 已合并且 5 次 CI 全绿，worktree `remove` 的致命缺陷已在最终 main 上复测通过，许可证与密钥审计完成；但**桌面应用仍未启动验证、无 E2E、GitHub 侧分支保护因 Free 计划不可用**。
+**一句话结论**：P0 基础设施已完成并收敛——三项 PR（#1 硬化、#2 Windows 长路径删除修复、#3 本报告与文档修正）中 #1/#2 已合并且 5 次 CI 全绿，worktree `remove` 的致命缺陷已在最终 main 上复测通过，许可证与密钥审计完成；但**桌面应用仍未启动验证、无 E2E**；分支保护曾因 Free 计划不可用，**已随同日公开而启用，见 §14 后记**。
 
 P0 范围（依据 `AGENTS.md` §2）：**只做基础设施，不实现产品功能**，交付物是"能让 P1 安全开始"的工程底座而非编辑器能力。
 
@@ -172,8 +172,8 @@ Git 跟踪文件总数 **77**（实测），与首次提交的 "77 files changed
 | PR #1               | `chore(infra): harden worktree tooling and guard main pushes`，`chore/p0-hardening` @ `38f84e1` → **MERGED**（merge `55637b0`），CI run `38706529383` success 36s                                                |
 | PR #2               | `fix(worktree): delete worktrees reliably on Windows long paths`，`fix/worktree-long-path-removal` @ `522f96c` → **MERGED**（merge `5f3ad2e`），CI run `38707513532` success 48s                                 |
 | PR #3               | `docs(report): add the P0 bootstrap report and correct overstated docs`（[PR #3](https://github.com/Jimqiu1003/auralide/pull/3)），`docs/p0-report-and-corrections` @ `ad69300` → **OPEN**（本报告随该 PR 交付） |
-| 分支保护 / Rulesets | **不可用**：`POST /rulesets`、`PUT /branches/main/protection`、`GET /branches/main/protection`、`GET /rulesets` 全部 HTTP 403 `Upgrade to GitHub Pro or make this repository public to enable this feature`      |
-| 漏洞告警 / 高级安全 | **Dependabot 漏洞告警未启用**（`GET /vulnerability-alerts` → 404 `Vulnerability alerts are disabled`）；`security_and_analysis: null`（私有仓库无 GHAS）；无 secret scanning                                     |
+| 分支保护 / Rulesets | 快照时**不可用**（4 个 API 全 403）；**已于同日随公开启用，见 §14 后记**                                                                                                                                         |
+| 漏洞告警 / 高级安全 | 快照时未启用（`/vulnerability-alerts` → 404、`security_and_analysis: null`）；**现已启用 Dependabot 漏洞告警 + secret scanning + push protection，见 §14 后记**                                                  |
 
 > ⚠️ **禁止表述**："分支保护已生效"。当前补偿控制是仓库内的 `.githooks/pre-push`：它是**本地钩子**，**不随 clone 分发**、**可用 `git push --no-verify` 绕过**，**不是安全边界**，也不能约束他人。CI 在每个 PR 上运行，但**不阻断**合并。
 >
@@ -366,6 +366,32 @@ Git 跟踪文件总数 **77**（实测），与首次提交的 "77 files changed
 
 除上述条目外，提交统计、版本号、仓库可见性、403 结论、测试用例数与 CLI 行为均已实测复核，与事实清单一致。
 
+## 14. 后记：仓库转为公开并启用平台保护（2026-10-15，快照之后）
+
+快照（16:49）之后，项目所有者指示将仓库由 Private 改为 **Public**。变更为 2026-10-15 17:17 +08:00 执行并验证。**§1–§13 中"私有仓库 / 保护不可用 / 无 secret scanning / Dependabot 未启用"等表述仅在快照时点成立**，现状如下。
+
+| 项                  | 变更前（快照）              | 变更后（现状）                                                                                                                                                                                                                                             | 证据                                                                                       |
+| ------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 可见性              | Private                     | **Public**                                                                                                                                                                                                                                                 | `gh repo view` → `visibility=PUBLIC isPrivate=false`；`gh api repos/...` → `private=false` |
+| `main` 分支保护     | 4 个 API 全 403，仅本地钩子 | **规则集 `main-protection` 生效**（id 25150123，`target=branch`，`~DEFAULT_BRANCH`，`bypass_actors=[]`，`current_user_can_bypass=never`）：`deletion` + `non_fast_forward` + `pull_request`（0 个必需批准） + `required_status_checks`（`verify`，strict） | `gh api repos/.../rulesets`；端到端实测见下                                                |
+| secret scanning     | 无（私有仓库无 GHAS）       | **enabled** + **push protection enabled**                                                                                                                                                                                                                  | `gh api repos/... --jq .security_and_analysis`                                             |
+| Dependabot 漏洞告警 | 404 未启用                  | **已启用**                                                                                                                                                                                                                                                 | `PUT /vulnerability-alerts` → 204；随后 `GET` 成功                                         |
+| 自动依赖升级 PR     | —                           | 仍关闭（`dependabot_security_updates=disabled`），需所有者决定                                                                                                                                                                                             | 同上 API 输出                                                                              |
+
+**服务端强制端到端验证**（用 `--no-verify` 绕过本地钩子，确认拒绝来自 GitHub 而非本地脚本）：
+
+```text
+$ git push --no-verify origin scratch/protection-probe:main
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: - Changes must be made through a pull request.
+remote: - Required status check "verify" is expected.
+[remote rejected]
+origin/main 推送前后均为 e40309a（未变动）
+```
+
+**公开前检查**（避免不可逆的敏感信息暴露）：79 个跟踪文件 + 全部提交历史，11 类密钥模式扫描 → **0 命中**；唯一的 `.env` 类文件是 `.env.example`（空占位，`ANTHROPIC_API_KEY=` 被注释且为空）；无证书/私钥/大二进制文件。**已知暴露**：提交作者邮箱 `jimqiu1003@gmail.com`（提交元数据与 `NOTICE`）与 15 处本机绝对路径 `D:\01_Projects\...`（仅目录布局，非机密）；若需脱敏需改写历史，由所有者决定。
+
+**结论**：§11 中"无 GitHub 侧分支保护"这一**高风险项已消除**；§12 第 5 条（分支保护）与第 4 条中的"secret scanning/Dependabot"部分已落地。`.githooks/pre-push` 保留为本地预检——可被 `--no-verify` 绕过，但服务端规则不再受影响。
 ---
 
 **相关文件**：[CI 工作流](.github/workflows/ci.yml)｜[worktree 脚本](scripts/dev/worktree.ps1)｜[ADR-0001](docs/decisions/ADR-0001-foundation.md)｜[协作规程](docs/agents/COLLABORATION.md)｜[安全与许可证策略](docs/architecture/security.md)｜[贡献指南](CONTRIBUTING.md)｜[PR #1](https://github.com/Jimqiu1003/auralide/pull/1)｜[PR #2](https://github.com/Jimqiu1003/auralide/pull/2)

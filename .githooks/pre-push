@@ -1,15 +1,16 @@
 #!/bin/sh
 # Auralide local Git guard.
 #
-# Why this exists: GitHub branch protection and repository rulesets are not available for private
-# repositories on the current (Free) plan - both APIs answer HTTP 403 "Upgrade to GitHub Pro".
-# Until the plan supports it, this hook is the local control that keeps `main` integration-only.
+# Why this exists: a fast local pre-flight. It stopped being the only control on 2026-10-15, when
+# the repository was made public and a GitHub ruleset ("main-protection") took over enforcement:
+# no force pushes, no deletion, changes only through a pull request, and the `verify` status check
+# required. The server refuses a direct push with GH013 even when this hook is bypassed.
 #
-# It is a local convenience, NOT a security boundary: hooks are not cloned, can be bypassed with
-# `git push --no-verify`, and do not constrain anyone else. The authoritative rules are in
-# AGENTS.md and docs/agents/COLLABORATION.md; CI runs on every pull request regardless.
+# It is still a local convenience, NOT a security boundary: hooks are not cloned and can be bypassed
+# with `git push --no-verify`. The authoritative rules are in AGENTS.md and
+# docs/agents/COLLABORATION.md; the ruleset is the enforced one.
 #
-# Deliberate override (for a genuine emergency):
+# Deliberate override (skips this hook only - the ruleset will still reject a direct push to main):
 #   AURALIDE_ALLOW_MAIN_PUSH=1 git push origin main
 
 protected_ref="refs/heads/main"

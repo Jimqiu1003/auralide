@@ -8,19 +8,34 @@ worktree rules and engineering standards.
 
 `main` is integration-only: after the P0 bootstrap commit, every change lands through a Pull Request.
 
-**How that is enforced (verified 2026-10-15):** GitHub branch protection and repository rulesets are
-not available for private repositories on the current plan — `GET/PUT .../branches/main/protection`
-and `POST/GET .../rulesets` all answer `HTTP 403: Upgrade to GitHub Pro or make this repository
-public to enable this feature`. The controls that do exist are:
+**How that is enforced (verified 2026-10-15).** The repository is public and a repository ruleset,
+`main-protection`, is active on `~DEFAULT_BRANCH` with no bypass actors
+(`current_user_can_bypass: never`):
 
-- a local `pre-push` hook (`.githooks/pre-push`, enabled with `pnpm hooks:install`), which refuses
-  direct pushes to `main` and can be overridden deliberately with `AURALIDE_ALLOW_MAIN_PUSH=1`;
-- CI (`.github/workflows/ci.yml`) running on every pull request — visible, but **not blocking**
-  merges on the GitHub side.
+| Rule                     | Effect                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------- |
+| `pull_request`           | changes reach `main` only through a pull request (0 approvals required — single maintainer) |
+| `required_status_checks` | the `verify` check must pass, and the branch must be up to date with `main` first           |
+| `non_fast_forward`       | force pushes are rejected                                                                   |
+| `deletion`               | deleting `main` is rejected                                                                 |
 
-The hook is a local convenience, not a security boundary: hooks are not distributed by `git clone`
-and can be bypassed with `git push --no-verify`. Until the plan changes, "CI is green" is a rule
-maintained by discipline, not by the platform.
+Verified end to end: a direct push with the local hook bypassed (`git push --no-verify origin
+<branch>:main`) is refused by the server with
+
+```
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: - Changes must be made through a pull request.
+remote: - Required status check "verify" is expected.
+```
+
+The same change enabled **secret scanning** and **push protection** for the repository, plus
+**Dependabot vulnerability alerts**. Automated dependency-update pull requests stay off until the
+owner asks for them.
+
+`.githooks/pre-push` (enable once with `pnpm hooks:install`) remains a fast local pre-flight: it
+catches the mistake before the round trip. It is not a security boundary — it can be bypassed with
+`git push --no-verify` and is not distributed by `git clone` — and the ruleset now enforces the rule
+regardless.
 
 | Branch prefix | Use for                               |
 | ------------- | ------------------------------------- |
