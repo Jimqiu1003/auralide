@@ -7,3 +7,6 @@ import type { Layer } from '@auralide/core';
  * P1 adds the first real module behind this boundary.
  */
 export const layer: Layer = 'agent';
+
+export { auraRequestSchema } from './browser-contract.js';
+export type { AuraRequest, AuraTab, AuraElement, AuraDiagnostics, AuraScreenshot, AuraData, AuraErrorCode, AuraResult, AuraAuditEntry } from './browser-contract.js';
