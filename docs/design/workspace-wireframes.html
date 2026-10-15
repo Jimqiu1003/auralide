@@ -16,7 +16,7 @@
         --accent: #2556b8;
         --active: #e3ebfa;
       }
-      :root[data-theme="dark"] {
+      :root[data-theme='dark'] {
         color-scheme: dark;
         --canvas: #12171e;
         --surface: #1c242e;
@@ -27,7 +27,7 @@
         --active: #293d58;
       }
       @media (prefers-color-scheme: dark) {
-        :root[data-theme="system"] {
+        :root[data-theme='system'] {
           color-scheme: dark;
           --canvas: #12171e;
           --surface: #1c242e;
@@ -38,78 +38,351 @@
           --active: #293d58;
         }
       }
-      * { box-sizing: border-box; }
-      body { margin: 0; background: var(--canvas); color: var(--text); font: 14px/1.5 system-ui, "Segoe UI", sans-serif; }
-      a { color: var(--accent); }
-      :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-      button, select { font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; min-height: 36px; padding: 6px 12px; }
-      button { cursor: pointer; }
-      button:hover, select:hover { background: var(--active); }
-      button[aria-pressed="true"] { background: var(--active); border-color: var(--accent); box-shadow: inset 0 -2px var(--accent); }
-      .skip { position: absolute; left: 12px; top: -60px; background: var(--surface); padding: 12px; z-index: 2; }
-      .skip:focus { top: 8px; }
-      .review { max-width: 1560px; margin: auto; padding: 24px 32px; }
-      .eyebrow { color: var(--muted); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; }
-      h1 { font-size: 24px; margin: 4px 0 8px; }
-      h2 { font-size: 18px; margin: 0 0 8px; }
-      h3 { font-size: 13px; margin: 0 0 12px; }
-      p { margin: 8px 0; }
-      .lede { max-width: 900px; color: var(--muted); }
-      .controls { display: flex; flex-wrap: wrap; gap: 16px; margin: 24px 0; }
-      label { display: grid; gap: 6px; }
-      .label { color: var(--muted); font-size: 12px; }
-      .summary { display: flex; gap: 24px; align-items: baseline; border-top: 1px solid var(--border); padding: 16px 0; }
-      .summary p { max-width: 950px; color: var(--muted); }
-      .shell { border: 1px solid var(--border); border-radius: 8px; overflow: clip; background: var(--surface); }
-      .native { display: flex; justify-content: space-between; gap: 12px; padding: 10px 16px; background: var(--canvas); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; }
-      .topbar { padding: 12px 16px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); }
-      .sample { color: var(--muted); font-size: 12px; }
-      .workspace-nav { padding: 12px; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
-      .content { min-height: 540px; }
-      .panel { padding: 16px; min-width: 0; }
-      .panel + .panel { border-left: 1px solid var(--border); }
-      .direction-a .content { display: grid; grid-template-columns: 190px minmax(0, 1fr) 250px; }
-      .direction-b .body { display: grid; grid-template-columns: 150px minmax(0, 1fr); }
-      .direction-b .workspace-nav { flex-direction: column; justify-content: flex-start; border-bottom: 0; border-right: 1px solid var(--border); }
-      .direction-b .content { display: grid; grid-template-columns: 210px minmax(0, 1fr); }
-      .direction-b .shelf { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--border); }
-      .direction-c .content { display: grid; grid-template-columns: 220px minmax(0, 1.1fr) minmax(0, 1fr); }
-      .direction-c[data-workspace="aura"] .content { grid-template-columns: 200px minmax(0, .8fr) minmax(0, 1.4fr); }
-      .direction-c[data-workspace="agent"] .content { grid-template-columns: 290px minmax(0, 1fr) minmax(0, 1fr); }
-      .stack { display: grid; gap: 12px; }
-      .box { border: 1px solid var(--border); border-radius: 4px; padding: 12px; background: var(--canvas); }
-      .thumb { aspect-ratio: 16 / 9; display: grid; place-items: center; background: var(--surface); }
-      .selected { border: 2px solid var(--accent); }
-      .stage { background: var(--canvas); display: grid; align-content: center; gap: 16px; }
-      .slide { aspect-ratio: 16 / 9; color: #182330; background: #fff; border: 1px solid #758396; padding: 9%; display: grid; align-content: center; gap: 12px; }
-      .slide strong { font-size: clamp(18px, 2.1vw, 32px); line-height: 1.25; }
-      .slide p { color: #4b596b; }
-      .slide .object { border: 2px dashed #2556b8; padding: 12px; }
-      ul, ol { padding-left: 20px; margin: 0; }
-      li { margin: 8px 0; overflow-wrap: anywhere; }
-      dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0; }
-      dt { color: var(--muted); }
-      dd { margin: 0; overflow-wrap: anywhere; }
-      code, kbd { font-family: ui-monospace, Consolas, monospace; font-size: 12px; }
-      .browser-tabs { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-      .browser-tabs span { padding: 4px 8px; border: 1px solid var(--border); border-radius: 4px; }
-      .address { margin: 12px 0; padding: 8px; border: 1px solid var(--border); overflow-wrap: anywhere; }
-      .guest { min-height: 190px; border: 2px dashed var(--border); padding: 20px; display: grid; align-content: center; }
-      .statusbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
-      .notes { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-      .notes article { border-top: 1px solid var(--border); padding-top: 16px; }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--canvas);
+        color: var(--text);
+        font:
+          14px/1.5 system-ui,
+          'Segoe UI',
+          sans-serif;
+      }
+      a {
+        color: var(--accent);
+      }
+      :focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+      button,
+      select {
+        font: inherit;
+        color: inherit;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        min-height: 36px;
+        padding: 6px 12px;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:hover,
+      select:hover {
+        background: var(--active);
+      }
+      button[aria-pressed='true'] {
+        background: var(--active);
+        border-color: var(--accent);
+        box-shadow: inset 0 -2px var(--accent);
+      }
+      .skip {
+        position: absolute;
+        left: 12px;
+        top: -60px;
+        background: var(--surface);
+        padding: 12px;
+        z-index: 2;
+      }
+      .skip:focus {
+        top: 8px;
+      }
+      .review {
+        max-width: 1560px;
+        margin: auto;
+        padding: 24px 32px;
+      }
+      .eyebrow {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      h1 {
+        font-size: 24px;
+        margin: 4px 0 8px;
+      }
+      h2 {
+        font-size: 18px;
+        margin: 0 0 8px;
+      }
+      h3 {
+        font-size: 13px;
+        margin: 0 0 12px;
+      }
+      p {
+        margin: 8px 0;
+      }
+      .lede {
+        max-width: 900px;
+        color: var(--muted);
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        margin: 24px 0;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+      }
+      .label {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .summary {
+        display: flex;
+        gap: 24px;
+        align-items: baseline;
+        border-top: 1px solid var(--border);
+        padding: 16px 0;
+      }
+      .summary p {
+        max-width: 950px;
+        color: var(--muted);
+      }
+      .shell {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: clip;
+        background: var(--surface);
+      }
+      .native {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 16px;
+        background: var(--canvas);
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .topbar {
+        padding: 12px 16px;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .sample {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .workspace-nav {
+        padding: 12px;
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid var(--border);
+      }
+      .content {
+        min-height: 540px;
+      }
+      .panel {
+        padding: 16px;
+        min-width: 0;
+      }
+      .panel + .panel {
+        border-left: 1px solid var(--border);
+      }
+      .direction-a .content {
+        display: grid;
+        grid-template-columns: 190px minmax(0, 1fr) 250px;
+      }
+      .direction-b .body {
+        display: grid;
+        grid-template-columns: 150px minmax(0, 1fr);
+      }
+      .direction-b .workspace-nav {
+        flex-direction: column;
+        justify-content: flex-start;
+        border-bottom: 0;
+        border-right: 1px solid var(--border);
+      }
+      .direction-b .content {
+        display: grid;
+        grid-template-columns: 210px minmax(0, 1fr);
+      }
+      .direction-b .shelf {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid var(--border);
+      }
+      .direction-c .content {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1.1fr) minmax(0, 1fr);
+      }
+      .direction-c[data-workspace='aura'] .content {
+        grid-template-columns: 200px minmax(0, 0.8fr) minmax(0, 1.4fr);
+      }
+      .direction-c[data-workspace='agent'] .content {
+        grid-template-columns: 290px minmax(0, 1fr) minmax(0, 1fr);
+      }
+      .stack {
+        display: grid;
+        gap: 12px;
+      }
+      .box {
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 12px;
+        background: var(--canvas);
+      }
+      .thumb {
+        aspect-ratio: 16 / 9;
+        display: grid;
+        place-items: center;
+        background: var(--surface);
+      }
+      .selected {
+        border: 2px solid var(--accent);
+      }
+      .stage {
+        background: var(--canvas);
+        display: grid;
+        align-content: center;
+        gap: 16px;
+      }
+      .slide {
+        aspect-ratio: 16 / 9;
+        color: #182330;
+        background: #fff;
+        border: 1px solid #758396;
+        padding: 9%;
+        display: grid;
+        align-content: center;
+        gap: 12px;
+      }
+      .slide strong {
+        font-size: clamp(18px, 2.1vw, 32px);
+        line-height: 1.25;
+      }
+      .slide p {
+        color: #4b596b;
+      }
+      .slide .object {
+        border: 2px dashed #2556b8;
+        padding: 12px;
+      }
+      ul,
+      ol {
+        padding-left: 20px;
+        margin: 0;
+      }
+      li {
+        margin: 8px 0;
+        overflow-wrap: anywhere;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin: 0;
+      }
+      dt {
+        color: var(--muted);
+      }
+      dd {
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      code,
+      kbd {
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 12px;
+      }
+      .browser-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .browser-tabs span {
+        padding: 4px 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+      }
+      .address {
+        margin: 12px 0;
+        padding: 8px;
+        border: 1px solid var(--border);
+        overflow-wrap: anywhere;
+      }
+      .guest {
+        min-height: 190px;
+        border: 2px dashed var(--border);
+        padding: 20px;
+        display: grid;
+        align-content: center;
+      }
+      .statusbar {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 16px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .notes {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .notes article {
+        border-top: 1px solid var(--border);
+        padding-top: 16px;
+      }
       @media (max-width: 1050px) {
-        .review { padding: 16px; }
-        .direction-a .content, .direction-c .content, .direction-c[data-workspace] .content { grid-template-columns: 170px minmax(0, 1fr); }
-        .direction-a .content > :last-child, .direction-c .content > :last-child { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--border); }
-        .direction-b .body { grid-template-columns: 130px minmax(0, 1fr); }
+        .review {
+          padding: 16px;
+        }
+        .direction-a .content,
+        .direction-c .content,
+        .direction-c[data-workspace] .content {
+          grid-template-columns: 170px minmax(0, 1fr);
+        }
+        .direction-a .content > :last-child,
+        .direction-c .content > :last-child {
+          grid-column: 1 / -1;
+          border-left: 0;
+          border-top: 1px solid var(--border);
+        }
+        .direction-b .body {
+          grid-template-columns: 130px minmax(0, 1fr);
+        }
       }
       @media (max-width: 720px) {
-        .summary, .notes { display: block; }
-        .direction-a .content, .direction-b .content, .direction-c[data-workspace] .content, .direction-b .body { display: block; }
-        .panel + .panel { border-left: 0; border-top: 1px solid var(--border); }
-        .direction-b .workspace-nav { flex-direction: row; border-right: 0; border-bottom: 1px solid var(--border); }
-        .notes article { margin-top: 16px; }
+        .summary,
+        .notes {
+          display: block;
+        }
+        .direction-a .content,
+        .direction-b .content,
+        .direction-c[data-workspace] .content,
+        .direction-b .body {
+          display: block;
+        }
+        .panel + .panel {
+          border-left: 0;
+          border-top: 1px solid var(--border);
+        }
+        .direction-b .workspace-nav {
+          flex-direction: row;
+          border-right: 0;
+          border-bottom: 1px solid var(--border);
+        }
+        .notes article {
+          margin-top: 16px;
+        }
       }
     </style>
   </head>
@@ -119,43 +392,116 @@
       <header>
         <div class="eyebrow">Auralide / P1.5-C / Information architecture</div>
         <h1>工作区方向评审</h1>
-        <p class="lede">先选择工作方式，再确定组件。以下是可编辑 HTML 线框，所有内容为静态示例；没有真实编辑、Agent 执行、网页加载或保存功能。三个方向均待项目所有者选择。</p>
+        <p class="lede">
+          先选择工作方式，再确定组件。以下是可编辑 HTML
+          线框，所有内容为静态示例；没有真实编辑、Agent
+          执行、网页加载或保存功能。三个方向均待项目所有者选择。
+        </p>
       </header>
       <div class="controls">
-        <label><span class="label">信息架构方向</span><select id="direction"><option value="a">A · 画布优先 / 固定面板</option><option value="b">B · 任务工作区 / 渐进面板</option><option value="c">C · 研究与 Agent / 双表面</option></select></label>
-        <label><span class="label">界面主题</span><select id="theme"><option value="system">System · 跟随系统</option><option value="light">Light · 浅色</option><option value="dark">Dark · 深色</option></select></label>
-        <label><span class="label">平台规范示意</span><select id="platform"><option value="windows">Windows x64</option><option value="macos">macOS Apple Silicon</option></select></label>
+        <label
+          ><span class="label">信息架构方向</span
+          ><select id="direction">
+            <option value="a">A · 画布优先 / 固定面板</option>
+            <option value="b">B · 任务工作区 / 渐进面板</option>
+            <option value="c">C · 研究与 Agent / 双表面</option>
+          </select></label
+        >
+        <label
+          ><span class="label">界面主题</span
+          ><select id="theme">
+            <option value="system">System · 跟随系统</option>
+            <option value="light">Light · 浅色</option>
+            <option value="dark">Dark · 深色</option>
+          </select></label
+        >
+        <label
+          ><span class="label">平台规范示意</span
+          ><select id="platform">
+            <option value="windows">Windows x64</option>
+            <option value="macos">macOS Apple Silicon</option>
+          </select></label
+        >
       </div>
       <section class="summary" aria-labelledby="direction-heading">
-        <h2 id="direction-heading"></h2><p id="direction-description"></p>
+        <h2 id="direction-heading"></h2>
+        <p id="direction-description"></p>
       </section>
       <section id="workspace" class="shell" tabindex="-1" aria-label="工作区布局线框">
         <div class="native" id="native-chrome"></div>
-        <div class="topbar"><strong>Auralide · Project Atlas</strong><span class="sample">示例：Slide 01 / element title-01 / revision 12 · 未连接应用</span></div>
+        <div class="topbar">
+          <strong>Auralide · Project Atlas</strong
+          ><span class="sample">示例：Slide 01 / element title-01 / revision 12 · 未连接应用</span>
+        </div>
         <div class="body">
           <nav class="workspace-nav" aria-label="工作区">
             <button type="button" data-workspace="editor" aria-pressed="true">Editor</button>
-            <button type="button" data-workspace="design" aria-pressed="false">Design / Layers</button>
+            <button type="button" data-workspace="design" aria-pressed="false">
+              Design / Layers
+            </button>
             <button type="button" data-workspace="aura" aria-pressed="false">Aura Browser</button>
             <button type="button" data-workspace="agent" aria-pressed="false">Agent</button>
           </nav>
           <div class="content" id="content"></div>
         </div>
-        <div class="statusbar"><span id="view-status" role="status"></span><span id="shortcut-guide"></span></div>
+        <div class="statusbar">
+          <span id="view-status" role="status"></span><span id="shortcut-guide"></span>
+        </div>
       </section>
       <div class="notes">
-        <article><h2>评审重点</h2><p id="tradeoff"></p><p>选择方向和工作区后，比较图层、属性、Agent 和浏览器的位置。Tab 可逐个访问控件；方向和主题使用原生下拉框键盘操作。选中状态同时以文字与边框表达。</p></article>
-        <article><h2>运行时边界</h2><p>虚线浏览器区域仅为占位；真实 WebContentsView 不受 CSS z-index 覆盖。菜单或命令面板重叠前须隐藏原生 guest，关闭后恢复尺寸与焦点。当前文件没有 IPC、权限申请、第三方网页或图片资源。</p><p><a href="ui-architecture.md">信息架构说明</a> · <a href="component-system.md">组件与键盘规范</a></p></article>
+        <article>
+          <h2>评审重点</h2>
+          <p id="tradeoff"></p>
+          <p>
+            选择方向和工作区后，比较图层、属性、Agent 和浏览器的位置。Tab
+            可逐个访问控件；方向和主题使用原生下拉框键盘操作。选中状态同时以文字与边框表达。
+          </p>
+        </article>
+        <article>
+          <h2>运行时边界</h2>
+          <p>
+            虚线浏览器区域仅为占位；真实 WebContentsView 不受 CSS z-index
+            覆盖。菜单或命令面板重叠前须隐藏原生 guest，关闭后恢复尺寸与焦点。当前文件没有
+            IPC、权限申请、第三方网页或图片资源。
+          </p>
+          <p>
+            <a href="ui-architecture.md">信息架构说明</a> ·
+            <a href="component-system.md">组件与键盘规范</a>
+          </p>
+        </article>
       </div>
     </main>
     <script>
       const directions = {
-        a: { title: "A · 画布优先", description: "左侧缩略图与图层，中央画布，右侧属性固定。顶部切换检查工作区，保持对象选择上下文。", tradeoff: "调整对象只需选中，属性始终在右；研究资料需切换 Aura 再返回。适合反复精调，但面板会压缩画布。" },
-        b: { title: "B · 任务工作区", description: "左侧任务导航，中央随任务切换，属性或诊断移至底部。图层只在 Design 中完整展开。", tradeoff: "当前任务获得更多空间；完整图层和研究需要切换工作区。需要额外关注模式切换后的焦点与上下文恢复。" },
-        c: { title: "C · 研究与 Agent 双表面", description: "左侧保留意图与选中对象，中间编辑，右侧持续展示 Aura。跨表面对照不必离开当前工作。", tradeoff: "参考、命令和画布同时可见，减少研究往返；双表面压缩单页尺寸，并增加焦点管理与敏感网页检查的复杂度。" },
+        a: {
+          title: 'A · 画布优先',
+          description:
+            '左侧缩略图与图层，中央画布，右侧属性固定。顶部切换检查工作区，保持对象选择上下文。',
+          tradeoff:
+            '调整对象只需选中，属性始终在右；研究资料需切换 Aura 再返回。适合反复精调，但面板会压缩画布。',
+        },
+        b: {
+          title: 'B · 任务工作区',
+          description:
+            '左侧任务导航，中央随任务切换，属性或诊断移至底部。图层只在 Design 中完整展开。',
+          tradeoff:
+            '当前任务获得更多空间；完整图层和研究需要切换工作区。需要额外关注模式切换后的焦点与上下文恢复。',
+        },
+        c: {
+          title: 'C · 研究与 Agent 双表面',
+          description:
+            '左侧保留意图与选中对象，中间编辑，右侧持续展示 Aura。跨表面对照不必离开当前工作。',
+          tradeoff:
+            '参考、命令和画布同时可见，减少研究往返；双表面压缩单页尺寸，并增加焦点管理与敏感网页检查的复杂度。',
+        },
       };
-      const names = { editor: "Editor", design: "Design / Layers", aura: "Aura Browser", agent: "Agent" };
-      let activeWorkspace = "editor";
+      const names = {
+        editor: 'Editor',
+        design: 'Design / Layers',
+        aura: 'Aura Browser',
+        agent: 'Agent',
+      };
+      let activeWorkspace = 'editor';
       const thumbnails = `<h3>幻灯片 / Slides</h3><div class="stack"><div class="box thumb selected">01 · Opening</div><div class="box thumb">02 · Evidence</div><div class="box thumb">03 · Next steps</div></div>`;
       const layers = `<h3>图层 / Layers</h3><ol><li><strong>Title</strong><br><code>title-01</code> · 已选中</li><li>Body<br><code>body-01</code></li><li>Shape<br><code>shape-01</code></li></ol><p class="sample">顺序与 ID 为示意，不支持拖拽</p>`;
       const slide = `<h3>Slide 01 · Preview</h3><div class="slide"><strong class="object">A shared language<br>for ideas and agents.</strong><p>Core → validated command → preview</p></div><p class="sample">16:9 / 100% 示意 · 主题不改变文档颜色</p>`;
@@ -163,36 +509,81 @@
       const agent = `<h3>Agent / Proposal review</h3><div class="box"><strong>待审查示例 · 未执行</strong><p>目标：title-01<br>expectedRevision: 12</p><code>element.updateText</code></div><p>能力：仅当前文档。第三方网页检查未授权。</p><ol><li>读取结构化选择</li><li>审核命令与来源</li><li>应用后检查结果及截图</li></ol>`;
       const browser = `<h3>Aura Browser</h3><div class="browser-tabs"><span>Slide Preview · 示例</span><span>HTML Lab · 示例</span><span>Web Research · 未加载</span></div><div class="address">Origin: isolated preview / Slide 01 / revision 12</div><div class="guest"><strong>WebContentsView 预留区域</strong><p>仅线框，没有嵌入网页。Guest 无通用 IPC，无文件系统桥；默认拒绝额外权限。</p></div>`;
       const diagnostics = `<h3>Diagnostics / Inspection</h3><ul><li>示例 target: title-01</li><li>示例 revision: 12</li><li>Runtime diagnostics: 未运行</li><li>Screenshot verification: 未运行</li></ul>`;
-      const panel = (body, extra = "") => `<section class="panel ${extra}">${body}</section>`;
+      const panel = (body, extra = '') => `<section class="panel ${extra}">${body}</section>`;
       function render() {
-        const direction = document.querySelector("#direction").value;
+        const direction = document.querySelector('#direction').value;
         const config = directions[direction];
-        const workspace = document.querySelector("#workspace");
+        const workspace = document.querySelector('#workspace');
         workspace.className = `shell direction-${direction}`;
         workspace.dataset.workspace = activeWorkspace;
-        document.querySelector("#direction-heading").textContent = config.title;
-        document.querySelector("#direction-description").textContent = config.description;
-        document.querySelector("#tradeoff").textContent = config.tradeoff;
+        document.querySelector('#direction-heading').textContent = config.title;
+        document.querySelector('#direction-description').textContent = config.description;
+        document.querySelector('#tradeoff').textContent = config.tradeoff;
         let content;
-        if (direction === "a") {
-          content = panel(activeWorkspace === "design" ? layers : thumbnails + "<hr>" + layers) + panel(activeWorkspace === "aura" ? browser : slide, "stage") + panel(activeWorkspace === "agent" ? agent : activeWorkspace === "aura" ? diagnostics : inspector);
-        } else if (direction === "b") {
-          const left = activeWorkspace === "design" ? layers : activeWorkspace === "agent" ? agent : thumbnails;
-          content = panel(left) + panel(activeWorkspace === "aura" ? browser : slide, "stage") + panel(activeWorkspace === "agent" ? "<h3>Command results / Audit</h3><p>暂无操作记录 · 不执行任何命令</p>" : activeWorkspace === "aura" ? diagnostics : inspector, "shelf");
+        if (direction === 'a') {
+          content =
+            panel(activeWorkspace === 'design' ? layers : thumbnails + '<hr>' + layers) +
+            panel(activeWorkspace === 'aura' ? browser : slide, 'stage') +
+            panel(
+              activeWorkspace === 'agent'
+                ? agent
+                : activeWorkspace === 'aura'
+                  ? diagnostics
+                  : inspector,
+            );
+        } else if (direction === 'b') {
+          const left =
+            activeWorkspace === 'design'
+              ? layers
+              : activeWorkspace === 'agent'
+                ? agent
+                : thumbnails;
+          content =
+            panel(left) +
+            panel(activeWorkspace === 'aura' ? browser : slide, 'stage') +
+            panel(
+              activeWorkspace === 'agent'
+                ? '<h3>Command results / Audit</h3><p>暂无操作记录 · 不执行任何命令</p>'
+                : activeWorkspace === 'aura'
+                  ? diagnostics
+                  : inspector,
+              'shelf',
+            );
         } else {
-          content = panel(agent + "<hr>" + layers) + panel(slide + (activeWorkspace === "design" || activeWorkspace === "editor" ? "<hr>" + inspector : "<hr>" + diagnostics), "stage") + panel(browser + (activeWorkspace === "aura" ? "<hr>" + diagnostics : ""));
+          content =
+            panel(agent + '<hr>' + layers) +
+            panel(
+              slide +
+                (activeWorkspace === 'design' || activeWorkspace === 'editor'
+                  ? '<hr>' + inspector
+                  : '<hr>' + diagnostics),
+              'stage',
+            ) +
+            panel(browser + (activeWorkspace === 'aura' ? '<hr>' + diagnostics : ''));
         }
-        document.querySelector("#content").innerHTML = content;
-        for (const button of document.querySelectorAll("button[data-workspace]")) button.setAttribute("aria-pressed", String(button.dataset.workspace === activeWorkspace));
-        const mac = document.querySelector("#platform").value === "macos";
-        document.querySelector("#native-chrome").textContent = mac ? "macOS 原生标题栏示意 · 左侧系统窗口按钮 / 菜单位于系统菜单栏" : "Windows 原生标题栏示意 · 应用菜单 / 右侧系统窗口按钮";
-        document.querySelector("#shortcut-guide").textContent = mac ? "规范示意：Cmd+K 命令面板 / Cmd+Z 撤销" : "规范示意：Ctrl+K 命令面板 / Ctrl+Z 撤销";
-        document.querySelector("#view-status").textContent = `${config.title} / ${names[activeWorkspace]} · Proposed`;
+        document.querySelector('#content').innerHTML = content;
+        for (const button of document.querySelectorAll('button[data-workspace]'))
+          button.setAttribute('aria-pressed', String(button.dataset.workspace === activeWorkspace));
+        const mac = document.querySelector('#platform').value === 'macos';
+        document.querySelector('#native-chrome').textContent = mac
+          ? 'macOS 原生标题栏示意 · 左侧系统窗口按钮 / 菜单位于系统菜单栏'
+          : 'Windows 原生标题栏示意 · 应用菜单 / 右侧系统窗口按钮';
+        document.querySelector('#shortcut-guide').textContent = mac
+          ? '规范示意：Cmd+K 命令面板 / Cmd+Z 撤销'
+          : '规范示意：Ctrl+K 命令面板 / Ctrl+Z 撤销';
+        document.querySelector('#view-status').textContent =
+          `${config.title} / ${names[activeWorkspace]} · Proposed`;
       }
-      document.querySelector("#direction").addEventListener("change", render);
-      document.querySelector("#platform").addEventListener("change", render);
-      document.querySelector("#theme").addEventListener("change", (event) => { document.documentElement.dataset.theme = event.target.value; });
-      for (const button of document.querySelectorAll("button[data-workspace]")) button.addEventListener("click", () => { activeWorkspace = button.dataset.workspace; render(); });
+      document.querySelector('#direction').addEventListener('change', render);
+      document.querySelector('#platform').addEventListener('change', render);
+      document.querySelector('#theme').addEventListener('change', (event) => {
+        document.documentElement.dataset.theme = event.target.value;
+      });
+      for (const button of document.querySelectorAll('button[data-workspace]'))
+        button.addEventListener('click', () => {
+          activeWorkspace = button.dataset.workspace;
+          render();
+        });
       render();
     </script>
   </body>

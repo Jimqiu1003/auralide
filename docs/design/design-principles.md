@@ -38,12 +38,12 @@ See ADR-0001, ADR-0002 and the P1.5 platform/browser ADRs when integrated.
 These are narrow observations from official documentation, checked 2026-10-15, not endorsements of
 entire interfaces. Proposed Auralide applications are design inferences and require user testing.
 
-| Source observation | Auralide design inference |
-| --- | --- |
-| Keynote distinguishes navigator and slide-only views, with an object list in those views. [Apple guide](https://support.apple.com/en-au/guide/keynote/tanae4979928/mac) | Keep slide navigation and object selection explicit, allowing canvas-focused work. |
-| WPS provides a Selection Pane through its Select menu. [WPS Academy](https://www.wps.com/academy/how-to-use-select-feature-in-wps-presentation/1862117/) | Offer an object list route when overlapping objects prevent direct selection. |
-| Canva exposes layers through Position. [Canva Help](https://www.canva.com/help/finding-and-arranging-layers/) | Let users identify and arrange objects without disturbing slide layout. |
-| Figma Slides separates simple slide authoring from Design mode and its advanced controls. [Figma Slides](https://www.figma.com/slides/) | Compare a task workspace direction with a persistent-panel direction. |
+| Source observation                                                                                                                                                                             | Auralide design inference                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Keynote distinguishes navigator and slide-only views, with an object list in those views. [Apple guide](https://support.apple.com/en-au/guide/keynote/tanae4979928/mac)                        | Keep slide navigation and object selection explicit, allowing canvas-focused work.                                          |
+| WPS provides a Selection Pane through its Select menu. [WPS Academy](https://www.wps.com/academy/how-to-use-select-feature-in-wps-presentation/1862117/)                                       | Offer an object list route when overlapping objects prevent direct selection.                                               |
+| Canva exposes layers through Position. [Canva Help](https://www.canva.com/help/finding-and-arranging-layers/)                                                                                  | Let users identify and arrange objects without disturbing slide layout.                                                     |
+| Figma Slides separates simple slide authoring from Design mode and its advanced controls. [Figma Slides](https://www.figma.com/slides/)                                                        | Compare a task workspace direction with a persistent-panel direction.                                                       |
 | Slides.com provides HTML/CSS developer controls and HTML export. [Developer mode](https://slides.slides.com/news/slides-for-developers), [HTML export](https://slides.com/docs/export-to-html) | Preserve an HTML-oriented inspection surface, while retaining Core as truth rather than copying its raw-HTML editing model. |
 
 ## Acceptance for the next UI implementation
