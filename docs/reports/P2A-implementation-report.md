@@ -1,7 +1,7 @@
 # P2A — Durable Document Foundation
 
 Date: 2026-10-15. Lead implementation, sequential execution without sub-agents. Issue
-[#22](https://github.com/Jimqiu1003/auralide/issues/22). Status: **Implemented and locally verified**;
+[#22](https://github.com/Jimqiu1003/auralide/issues/22). Status: **Implemented and verified on Windows x64 and native macOS ARM64**;
 native CI gate recorded below. Architecture V2 and ADR-0005/0006 remain **Proposed** for owner review.
 
 ## 1. Existing State
@@ -122,7 +122,7 @@ and undoable. Scope and permission ADR review precede exposing an external trans
 
 ## 8. Git Delivery / native gate
 
-Branch: `feat/p2a-durable-documents`; [PR #23](https://github.com/Jimqiu1003/auralide/pull/23). Implementation c57c4a8b7498e15809cf758b0bcbe81b1087e5c0 passed [native CI 38752711796](https://github.com/Jimqiu1003/auralide/actions/runs/38752711796): Windows x64, macOS ARM64 and aggregate success. Downloaded macOS persistence.json reports 20/20 workflow checks; platform.json records Node 24.20.0 / Electron 44.7.2 ARM64, uname arm64, hardware=1, translated=0. Two subsequent PNG assertions extend the same test to 22 local checks; their remote result is tracked by PR checks. The latest exact
+Branch: `feat/p2a-durable-documents`; [PR #23](https://github.com/Jimqiu1003/auralide/pull/23). Implementation c57c4a8b7498e15809cf758b0bcbe81b1087e5c0 passed [native CI 38752711796](https://github.com/Jimqiu1003/auralide/actions/runs/38752711796): Windows x64, macOS ARM64 and aggregate success. Downloaded macOS persistence.json reports 20/20 workflow checks; platform.json records Node 24.20.0 / Electron 44.7.2 ARM64, uname arm64, hardware=1, translated=0. Final implementation/test head 9af5b05adb8c10cad42d39a9b03b77feba309edc passed [CI 38753293317](https://github.com/Jimqiu1003/auralide/actions/runs/38753293317), both native jobs and aggregate. Downloaded ARM64 persistence.json confirms 22/22 checks; its native HTML PNG was visually reviewed alongside the Windows PNG. This includes the two added screenshot assertions. Evidence was rechecked on 2026-10-16. The report-only commit records these fixed implementation heads; its own hash is available in Git history. The latest exact
 head CI must pass Windows x64 and native macOS ARM64 before recommending integration. ADR-0005 and
 ADR-0006, snapshot/history policy and stacked PR merge order require owner review. Nothing merges
 automatically; main and existing worktrees remain preserved.
