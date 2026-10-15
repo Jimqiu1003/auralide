@@ -1,0 +1,27 @@
+{
+  "name": "@auralide/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Headless command-line entry point for scripted and agent-driven workflows.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "bin": {
+    "auralide": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@auralide/core": "workspace:*",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "vitest": "^5.0.4"
+  }
+}

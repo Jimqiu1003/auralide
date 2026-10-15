@@ -1,0 +1,20 @@
+# Normalize every text file to LF in the repository.
+* text=auto eol=lf
+
+# Windows scripting files stay CRLF in the working tree.
+*.ps1 text eol=crlf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Binary assets must never be converted.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+
+# Generated / low-signal files.
+pnpm-lock.yaml linguist-generated=true

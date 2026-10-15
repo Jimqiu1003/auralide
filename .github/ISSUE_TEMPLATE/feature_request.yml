@@ -1,0 +1,53 @@
+name: Feature request
+description: Propose a capability or an architectural change
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Proposals that change an accepted architecture decision must say so explicitly
+        (see `docs/decisions/` and `AGENTS.md` §12).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or engineering problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Keep it concrete and scoped. Mention the layer(s) it belongs to.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Including "do nothing".
+    validations:
+      required: true
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      multiple: true
+      options:
+        - packages/core (document model / commands)
+        - packages/renderer / canvas / editor-ui
+        - packages/html-bridge (untrusted HTML)
+        - packages/exporters
+        - packages/agent / apps/cli
+        - apps/desktop (Electron shell)
+        - tooling / CI / dependencies
+    validations:
+      required: true
+  - type: checkboxes
+    id: adr
+    attributes:
+      label: Decision impact
+      options:
+        - label: This requires a new or updated ADR
+        - label: This adds or changes a dependency
+        - label: This affects the security constraints in docs/architecture/security.md

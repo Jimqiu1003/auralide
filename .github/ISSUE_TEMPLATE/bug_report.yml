@@ -1,0 +1,58 @@
+name: Bug report
+description: Report a defect in Auralide
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Do not include secrets, tokens or private document content.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Actual behaviour, including the exact error message if there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+        3. …
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit / version
+      description: Commit SHA or version the problem was observed on.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS build, Node.js version, pnpm version, and whether the app ran from source or a build.
+      placeholder: Windows 11 26300, Node 24.21.0, pnpm 12.11.2
+    validations:
+      required: true
+  - type: dropdown
+    id: checks
+    attributes:
+      label: Checks run
+      description: Which checks were executed before reporting?
+      multiple: true
+      options:
+        - pnpm typecheck
+        - pnpm lint
+        - pnpm test
+        - pnpm build
+        - none

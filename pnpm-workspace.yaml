@@ -1,0 +1,21 @@
+packages:
+  - apps/*
+  - packages/*
+
+# No dependency currently runs an install script, so no package is listed under `allowBuilds`.
+# pnpm >= 11 denies dependency build scripts by default (`strictDepBuilds` defaults to true) and
+# fails the install when it meets an unreviewed one, which is the behaviour we want: review the
+# script, then approve it explicitly, e.g.
+#
+#   allowBuilds:
+#     some-native-addon: true
+#
+# Never use `dangerouslyAllowAllBuilds` in this repository.
+
+# pnpm >= 11 refuses dependency versions younger than `minimumReleaseAge`
+# (supply-chain protection against freshly published releases) unless they are
+# excluded here. React 19.3.1 was published inside that window when this workspace
+# was created; remove these entries once the versions age past the threshold.
+minimumReleaseAgeExclude:
+  - react@19.3.1
+  - react-dom@19.3.1

@@ -1,0 +1,31 @@
+:root {
+  color-scheme: dark;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #101014;
+  color: #f4f4f5;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100vh;
+  padding: 0 3rem;
+}
+
+.shell h1 {
+  margin: 0;
+  font-size: 2.5rem;
+  letter-spacing: 0.04em;
+}
+
+.layers {
+  color: #a1a1aa;
+  font-size: 0.85rem;
+}

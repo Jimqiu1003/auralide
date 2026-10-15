@@ -1,0 +1,10 @@
+Auralide
+Copyright 2026 Jim <jimqiu1003@gmail.com>
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Attribution note for redistributions: keep this NOTICE file and the LICENSE file with any
+distribution of the work or derivative works, as required by section 4 of the license.
+
+Third-party components are used under their own licenses; the dependency license inventory and
+review policy are recorded in docs/architecture/security.md.
