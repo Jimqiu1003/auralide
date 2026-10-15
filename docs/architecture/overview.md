@@ -1,7 +1,8 @@
 # Auralide Architecture Overview
 
-Status: **P0 baseline** (infrastructure only — no editor functionality exists yet).
-Decisions referenced here are recorded in [`docs/decisions/`](../decisions/).
+Status: **P1 — runtime & core foundation** (a really starting Electron shell and a structured document
+model with a validated command layer; still no editor UI).
+Phase plan: [`p1-plan.md`](p1-plan.md). Decisions: [`docs/decisions/`](../decisions/).
 
 ## 1. What Auralide is
 
@@ -95,8 +96,8 @@ Local-first: documents are files on disk owned by the user.
 
 Node.js 24 (Active LTS) is the runtime baseline; `engines` in `package.json` enforces it.
 
-## 7. Explicit non-goals for P0
+## 7. Explicit non-goals for P1
 
-- No editor features, no document schema implementation, no storage engine.
-- No packaging/signing/auto-update, no release automation.
-- No cloud services, accounts or telemetry.
+- No editor UI beyond the diagnostic shell: no canvas, toolbars, inspectors or slide editing surface.
+- No animation, complex HTML import, PPTX/PDF conversion or real-time collaboration.
+- No packaging/signing/auto-update, no release automation, no cloud services or telemetry.

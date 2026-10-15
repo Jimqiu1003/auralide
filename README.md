@@ -4,17 +4,20 @@
 freedom of HTML/CSS/SVG with direct manipulation, on top of a structured document model that humans
 and AI agents edit through the same validated command layer.
 
-> Status: **P0 — infrastructure bootstrap**. The repository contains the monorepo scaffold, tooling,
-> CI, collaboration rules and architecture records. It deliberately contains no editor features yet.
+> Status: **P1 — runtime & core foundation**. P0 delivered the monorepo, tooling, CI and architecture
+> records (see [`docs/reports/P0-bootstrap-report.md`](docs/reports/P0-bootstrap-report.md)). P1 adds a
+> really starting Electron shell with a safe preload/IPC boundary, plus the first structured document
+> model and command dispatcher (see [`docs/architecture/p1-plan.md`](docs/architecture/p1-plan.md)).
+> There is still no editor UI.
 
 ## Requirements
 
-| Tool    | Version used by this repository | Notes                                    |
-| ------- | ------------------------------- | ---------------------------------------- |
-| Node.js | 24.x (Active LTS)               | `engines.node: >=24.0.0`                 |
-| pnpm    | 12.11.2                         | pinned via `packageManager`              |
-| Git     | 2.55+                           | worktrees are part of the workflow       |
-| Python  | 3.12 (optional)                 | future tooling only, not required for P0 |
+| Tool    | Version used by this repository | Notes                              |
+| ------- | ------------------------------- | ---------------------------------- |
+| Node.js | 24.x (Active LTS)               | `engines.node: >=24.0.0`           |
+| pnpm    | 12.11.2                         | pinned via `packageManager`        |
+| Git     | 2.55+                           | worktrees are part of the workflow |
+| Python  | 3.12 (optional)                 | future tooling only, not required  |
 
 ## Setup
 
@@ -60,11 +63,13 @@ tests/fixtures/   shared test fixtures
 - Never commit to `main` directly after bootstrap: use `feat/*`, `fix/*`, `chore/*`, `docs/*`,
   `test/*`, `refactor/*` branches and open a Pull Request (see
   [`docs/agents/COLLABORATION.md`](docs/agents/COLLABORATION.md)).
-- Parallel work happens in isolated Git worktrees under
+- Parallel work on **one machine** happens in isolated Git worktrees under
   `D:\01_Projects\01_MyProjects\Auralide Worktrees` (see
-  [`docs/agents/WORKTREE-GUIDE.md`](docs/agents/WORKTREE-GUIDE.md)).
-- Architecture decisions live in [`docs/decisions/`](docs/decisions/); the P0 report is
-  [`docs/reports/P0-bootstrap-report.md`](docs/reports/P0-bootstrap-report.md).
+  [`docs/agents/WORKTREE-GUIDE.md`](docs/agents/WORKTREE-GUIDE.md)). A worktree is local isolation,
+  **not** a sharing mechanism: the second developer works from their own clone and pushes branches.
+- Architecture decisions live in [`docs/decisions/`](docs/decisions/); phase plans in
+  [`docs/architecture/`](docs/architecture/). The P0 report
+  ([`docs/reports/P0-bootstrap-report.md`](docs/reports/P0-bootstrap-report.md)) is frozen history.
 
 ## License
 

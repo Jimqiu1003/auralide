@@ -1,6 +1,8 @@
 # Security and Dependency Baseline
 
-Status: **P0** — this document records the rules and constraints that later phases must honor.
+Status: **P1** — this document records the rules and constraints the runtime must honor. The IPC
+baseline decided for P1 is in [`ADR-0002`](../decisions/ADR-0002-p1-runtime-and-core.md); its
+verification evidence is published in the P1 runtime report when the phase closes.
 Nothing here replaces a threat model for the finished product.
 
 ## 1. Secrets

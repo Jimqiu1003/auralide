@@ -8,8 +8,11 @@
 - Primary platform: Windows desktop
 - Architecture: Local-first, modular monorepo
 - License: Apache-2.0
-- Development stage: P0 Infrastructure Bootstrap
+- Repository: public, <https://github.com/Jimqiu1003/auralide> (owner decision, 2026-10-15)
+- Development stage: P1 Runtime & Core Foundation
 - Project root: `D:\01_Projects\01_MyProjects\Auralide Dev`
+- Development team: Project Owner / Lead Engineer and Compatibility & QA Engineer
+  (see `docs/agents/COLLABORATION.md`)
 
 ### Product Vision
 
@@ -48,7 +51,9 @@ Architecture layers:
 
 Keep the core independent of Electron and UI frameworks.
 
-Do not implement product functionality during P0 unless explicitly requested.
+During P1, implement the runtime shell and the core document/command foundation described in
+`docs/architecture/p1-plan.md`. Do not build editor UI features, animation, import/export pipelines or
+collaboration features: P1 is about a safe runtime and a trustworthy model.
 
 ## 3. Source of Truth
 
@@ -117,7 +122,11 @@ Roles:
 - Agent Integration Agent: CLI, MCP and AI interfaces.
 - QA Agent: tests, compatibility and validation.
 
-During P0, implement infrastructure only. Other roles may research or document their future responsibilities.
+P1 runs one Lead-owned task per workstream: `chore/p1-project-transition`, `feat/p1-desktop-runtime`,
+`feat/p1-core-commands`, `feat/p1-integration` (see `docs/architecture/p1-plan.md`). A Core Agent may
+implement inside `packages/core` under a Lead-owned task; the Compatibility & QA engineer owns
+`tests/fixtures/html/**` and `docs/qa/**`. The two human developers coordinate through GitHub Issues
+and Pull Requests; a worktree isolates work on one machine only and is never a sharing mechanism.
 
 Rules:
 

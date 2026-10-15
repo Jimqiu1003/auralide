@@ -130,6 +130,10 @@ you have checked its contents.
 
 ## Notes
 
+- **Local to one machine.** A worktree isolates parallel work inside this clone: it has its own
+  working directory, index and checked-out branch, while sharing `origin`. It does not coordinate with
+  another developer's machine — cross-developer work moves through pushed branches and pull requests.
+
 - Each worktree needs its own `pnpm install`; `node_modules` is not shared, the content-addressable
   store is. Disk cost is small, isolation is real.
 - Turborepo caches live per worktree (`.turbo/` is ignored), so builds in different worktrees do not

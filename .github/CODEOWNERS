@@ -1,0 +1,36 @@
+# Auralide code owners
+#
+# Purpose: route review requests to the right person and record ownership zones
+# (see docs/agents/COLLABORATION.md §2).
+#
+# IMPORTANT: this file does NOT gate merges. The `main-protection` repository ruleset requires
+# 0 approving reviews during the single-maintainer phase, so CODEOWNERS is documentation and a
+# review-request hint today. It starts to matter only when the ruleset asks for approvals.
+#
+# The Compatibility & QA engineer's GitHub handle is not recorded yet; their zones are temporarily
+# owned by the Lead and marked TODO so the file stays valid. See issue "P1.0" / "QA-1".
+
+# Default: the Lead owns everything not listed below.
+*                       @Jimqiu1003
+
+# Core document model, command layer and validation
+/packages/core/         @Jimqiu1003
+
+# Desktop runtime, IPC boundary and CLI surface
+/apps/desktop/          @Jimqiu1003
+/apps/cli/              @Jimqiu1003
+
+# Shared configuration and integration (single integrator: the Lead)
+/package.json           @Jimqiu1003
+/pnpm-workspace.yaml    @Jimqiu1003
+/pnpm-lock.yaml         @Jimqiu1003
+/turbo.json             @Jimqiu1003
+/tsconfig.base.json     @Jimqiu1003
+/eslint.config.js       @Jimqiu1003
+/AGENTS.md              @Jimqiu1003
+/.github/               @Jimqiu1003
+/docs/decisions/        @Jimqiu1003
+
+# Compatibility & QA engineer (TODO: replace with their handle once known)
+/tests/fixtures/html/   @Jimqiu1003
+/docs/qa/               @Jimqiu1003

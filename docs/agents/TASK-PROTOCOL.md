@@ -91,7 +91,18 @@ When the work is executed through DSH Agent Teams, the shared task board mirrors
 Without Agent Teams, the same records live in the task description / PR body. The format is not
 optional; the storage is.
 
-## 6. Reporting a blocker
+## 6. Two developers, two machines
+
+- A task belongs to exactly one writer. Handing work over means pushing the branch and opening a
+  draft PR that states what is done, what remains and what was not verified.
+- Shared configuration (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`, `turbo.json`, CI,
+  `AGENTS.md`, `docs/decisions/**`) is integrated by the Lead only. Request the change instead of
+  editing it from a feature branch.
+- `tests/fixtures/html/**` and `docs/qa/**` belong to the Compatibility & QA engineer; the Lead does
+  not write there without being asked.
+- A worktree has no meaning to the other developer: it is local isolation, not a channel.
+
+## 7. Reporting a blocker
 
 A blocker report contains: task id, what was attempted, the exact command and error, what is
 already done and committed, what is _not_ verified, and the decision needed from the owner. Local

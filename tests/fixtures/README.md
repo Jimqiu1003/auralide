@@ -17,5 +17,6 @@ tests/fixtures/docs/     structured document samples for packages/core
 tests/fixtures/export/   expected export outputs for packages/exporters
 ```
 
-P0 ships no fixtures: there is no import/export code to test yet. Adding a directory here before a
-test needs it would be dead weight.
+P0 shipped no fixtures (there was no import/export code to test). From P1, `tests/fixtures/html/**`
+belongs to the Compatibility & QA engineer: they own the corpus and the compatibility notes, and the
+Lead does not write there without being asked.

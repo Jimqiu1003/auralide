@@ -16,12 +16,13 @@ Auralide Dev/
 │  ├─ agent/            agent-facing command surface
 │  └─ exporters/        HTML/PDF/PPTX adapters
 ├─ docs/
-│  ├─ architecture/     overview, repository structure, security baseline
+│  ├─ architecture/     overview, repository structure, security baseline, phase plans
 │  ├─ decisions/        Architecture Decision Records
-│  ├─ agents/           multi-agent collaboration, worktrees, task protocol
-│  └─ reports/          implementation and validation reports
+│  ├─ agents/           collaboration rules, worktrees, task protocol
+│  ├─ qa/               compatibility notes and QA procedures (QA engineer)
+│  └─ reports/          implementation and validation reports (per phase, frozen once closed)
 ├─ scripts/dev/         developer tooling (worktree management)
-├─ tests/fixtures/      shared test fixtures
+├─ tests/fixtures/      shared test fixtures (`html/` belongs to the QA engineer)
 ├─ .github/             CI workflow, PR and issue templates
 ├─ AGENTS.md            repository-wide rules for humans and agents
 ├─ turbo.json           task graph and caching
