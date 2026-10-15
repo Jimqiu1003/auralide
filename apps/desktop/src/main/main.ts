@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu, session, shell } from 'electron';
 import type { IpcMainInvokeEvent, WebContents } from 'electron';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -8,6 +8,7 @@ import type { LoadPath, PingResponse, RuntimeInfo } from '../shared/api.js';
 import { IPC, IPC_ALLOW_LIST } from '../shared/channels.js';
 import { describeIssues, pingRequestSchema } from '../shared/schemas.js';
 import { dispatchDocumentCommand, getDocument } from './document-session.js';
+import { applicationMenuTemplate } from './platform.js';
 import { isTrustedRendererUrl, validateDevServerUrl } from './security.js';
 
 /**
@@ -198,6 +199,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   void app.whenReady().then(() => {
+    Menu.setApplicationMenu(Menu.buildFromTemplate(applicationMenuTemplate(process.platform)));
     // No capability is granted by default, including to the application's own page.
     session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => {
       callback(false);
