@@ -2,15 +2,15 @@
 
 > **语言说明**：本报告是交付给项目所有者的中文实施报告；仓库内其余文档（`README.md`、`AGENTS.md`、`CONTRIBUTING.md`、`docs/**`、ADR）均以英文撰写，本报告不改变这一点。
 >
-> | 元信息       | 值                                                                                                                        |
-> | ------------ | ------------------------------------------------------------------------------------------------------------------------- |
-> | 报告日期     | 2026-10-15（Asia/Shanghai）                                                                                               |
-> | 执行者       | Lead Engineering Agent（DSH）                                                                                             |
-> | 撰写 / 修订  | teammate `report-drafter`（仅写入本文件）                                                                                 |
-> | 事实快照时间 | **2026-10-15 16:49 +08:00**（P0 收尾时点；Git / CI / GitHub 事实均以该时点实测为准）                                      |
-> | 项目 / 仓库  | Auralide — AI-Native HTML Presentation Editor（P0 Infrastructure Bootstrap）· `D:\01_Projects\01_MyProjects\Auralide Dev` |
-> | 当前 main    | `5f3ad2e36fda1d1a37e6659e41d870a32ae383e9`（PR #2 merge commit），本地与 `origin/main` 一致                               |
-> | 报告所在 PR  | PR #3，分支 `docs/p0-report-and-corrections`，**尚未合并**（截至快照时点尚未推送、尚未创建 PR，见 §13-11）                |
+> | 元信息       | 值                                                                                                                                          |
+> | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+> | 报告日期     | 2026-10-15（Asia/Shanghai）                                                                                                                 |
+> | 执行者       | Lead Engineering Agent（DSH）                                                                                                               |
+> | 撰写 / 修订  | teammate `report-drafter`（仅写入本文件）                                                                                                   |
+> | 事实快照时间 | **2026-10-15 16:49 +08:00**（P0 收尾时点；Git / CI / GitHub 事实均以该时点实测为准）                                                        |
+> | 项目 / 仓库  | Auralide — AI-Native HTML Presentation Editor（P0 Infrastructure Bootstrap）· `D:\01_Projects\01_MyProjects\Auralide Dev`                   |
+> | 当前 main    | `5f3ad2e36fda1d1a37e6659e41d870a32ae383e9`（PR #2 merge commit），本地与 `origin/main` 一致                                                 |
+> | 报告所在 PR  | [PR #3](https://github.com/Jimqiu1003/auralide/pull/3)，分支 `docs/p0-report-and-corrections` @ `ad69300`，**本 PR 即交付本报告，尚未合并** |
 
 ## 1. 概述
 
@@ -65,7 +65,7 @@ P0 范围（依据 `AGENTS.md` §2）：**只做基础设施，不实现产品�
 | 6 个 layer 包的实现          | `renderer`/`canvas`/`editor-ui`/`html-bridge`/`agent`/`exporters` 只导出 `layer` 常量，**无任何业务逻辑**（P0 有意为之的边界占位） | P0 不产生产品价值，符合既定范围 |
 | TypeScript 7.x               | 未升级（`typescript-eslint@8.71.2` peer 上限 `<6.1.0`）                                                                            | 停留在 TS 6.0.3                 |
 | Electron 打包 / 签名         | 未开始（含 Chromium/Node 声明随附问题）                                                                                            | 无分发物                        |
-| PR #3                        | 分支 `docs/p0-report-and-corrections` 尚未合并（快照时点 `gh pr list --state all` 仅返回 #1/#2）                                   | 报告与文档修正尚未进入 main     |
+| PR #3                        | 分支 `docs/p0-report-and-corrections` @ `ad69300` 尚未合并（PR #3 已创建，等待 CI 通过后合并）                                     | 报告与文档修正尚未进入 main     |
 | `docs/reports` 之外的 P1 项  | 见 §12                                                                                                                             | —                               |
 
 ### 1.4 独立验证（teammate 角色与处置）
@@ -161,19 +161,19 @@ Git 跟踪文件总数 **77**（实测），与首次提交的 "77 files changed
 
 ## 5. GitHub 仓库信息
 
-| 项                  | 值                                                                                                                                                                                                          |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| URL                 | <https://github.com/Jimqiu1003/auralide>                                                                                                                                                                    |
-| 可见性              | **Private**                                                                                                                                                                                                 |
-| 默认分支            | `main`（`branches/main` → `protected: false`）                                                                                                                                                              |
-| 账号 / Owner        | `Jimqiu1003`（个人账号，**P0 未创建任何 Organization**，也未改动账号全局设置；`gh api user/orgs` 返回 `The-Finilo-Project`、`Industrial-Miracles` 两个**与本项目无关**的既有组织）                          |
-| License             | Apache-2.0（GitHub 识别）                                                                                                                                                                                   |
-| 创建时间 / 认证     | 2026-10-15 08:09:15 UTC；GitHub CLI keyring，scope `gist`, `read:org`, `repo`, `workflow`                                                                                                                   |
-| PR #1               | `chore(infra): harden worktree tooling and guard main pushes`，`chore/p0-hardening` @ `38f84e1` → **MERGED**（merge `55637b0`），CI run `38706529383` success 36s                                           |
-| PR #2               | `fix(worktree): delete worktrees reliably on Windows long paths`，`fix/worktree-long-path-removal` @ `522f96c` → **MERGED**（merge `5f3ad2e`），CI run `38707513532` success 48s                            |
-| PR #3               | 本报告所在 PR，分支 `docs/p0-report-and-corrections`，**尚未合并**（快照时点 `gh pr list --state all` 仅返回 #1/#2）                                                                                        |
-| 分支保护 / Rulesets | **不可用**：`POST /rulesets`、`PUT /branches/main/protection`、`GET /branches/main/protection`、`GET /rulesets` 全部 HTTP 403 `Upgrade to GitHub Pro or make this repository public to enable this feature` |
-| 漏洞告警 / 高级安全 | **Dependabot 漏洞告警未启用**（`GET /vulnerability-alerts` → 404 `Vulnerability alerts are disabled`）；`security_and_analysis: null`（私有仓库无 GHAS）；无 secret scanning                                |
+| 项                  | 值                                                                                                                                                                                                               |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| URL                 | <https://github.com/Jimqiu1003/auralide>                                                                                                                                                                         |
+| 可见性              | **Private**                                                                                                                                                                                                      |
+| 默认分支            | `main`（`branches/main` → `protected: false`）                                                                                                                                                                   |
+| 账号 / Owner        | `Jimqiu1003`（个人账号，**P0 未创建任何 Organization**，也未改动账号全局设置；`gh api user/orgs` 返回 `The-Finilo-Project`、`Industrial-Miracles` 两个**与本项目无关**的既有组织）                               |
+| License             | Apache-2.0（GitHub 识别）                                                                                                                                                                                        |
+| 创建时间 / 认证     | 2026-10-15 08:09:15 UTC；GitHub CLI keyring，scope `gist`, `read:org`, `repo`, `workflow`                                                                                                                        |
+| PR #1               | `chore(infra): harden worktree tooling and guard main pushes`，`chore/p0-hardening` @ `38f84e1` → **MERGED**（merge `55637b0`），CI run `38706529383` success 36s                                                |
+| PR #2               | `fix(worktree): delete worktrees reliably on Windows long paths`，`fix/worktree-long-path-removal` @ `522f96c` → **MERGED**（merge `5f3ad2e`），CI run `38707513532` success 48s                                 |
+| PR #3               | `docs(report): add the P0 bootstrap report and correct overstated docs`（[PR #3](https://github.com/Jimqiu1003/auralide/pull/3)），`docs/p0-report-and-corrections` @ `ad69300` → **OPEN**（本报告随该 PR 交付） |
+| 分支保护 / Rulesets | **不可用**：`POST /rulesets`、`PUT /branches/main/protection`、`GET /branches/main/protection`、`GET /rulesets` 全部 HTTP 403 `Upgrade to GitHub Pro or make this repository public to enable this feature`      |
+| 漏洞告警 / 高级安全 | **Dependabot 漏洞告警未启用**（`GET /vulnerability-alerts` → 404 `Vulnerability alerts are disabled`）；`security_and_analysis: null`（私有仓库无 GHAS）；无 secret scanning                                     |
 
 > ⚠️ **禁止表述**："分支保护已生效"。当前补偿控制是仓库内的 `.githooks/pre-push`：它是**本地钩子**，**不随 clone 分发**、**可用 `git push --no-verify` 绕过**，**不是安全边界**，也不能约束他人。CI 在每个 PR 上运行，但**不阻断**合并。
 >
@@ -301,7 +301,7 @@ Git 跟踪文件总数 **77**（实测），与首次提交的 "77 files changed
 | layer 包业务逻辑  | `renderer`/`canvas`/`editor-ui`/`html-bridge`/`agent`/`exporters` 只声明 layer 身份，**无任何业务逻辑**——这是 P0 **有意为之的边界占位**，不构成功效 |
 | GitHub 侧分支保护 | Free 计划 + private 仓库限制，未启用任何保护                                                                                                        |
 | 许可证 / 漏洞门禁 | `pnpm audit` 与许可证扫描**尚未进 CI**（本次为手动执行）                                                                                            |
-| PR #3             | 本报告与文档修正尚未合并（分支未推送、PR 未创建）                                                                                                   |
+| PR #3             | 本报告与文档修正尚未合并（PR #3 已创建，等待 CI 通过后合并）                                                                                        |
 | 打包 / 签名       | Electron 打包与签名未开始（含 Chromium/Node 声明随附）                                                                                              |
 
 ### 10.2 问题记录与已修复缺陷
@@ -349,20 +349,20 @@ Git 跟踪文件总数 **77**（实测），与首次提交的 "77 files changed
 
 旧版报告写于 16:39 快照；以下差异均已由 PR #1 / #2 / #3 收敛，保留对照以便追溯。
 
-| #   | 旧版（16:39 快照）的说法                                            | 最终事实                                                                                                                                                         | 收敛方式                                                                          |
-| --- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| 1   | main 停在 `97530e6`/`55637b0`，主工作区 `behind 2`                  | main = `5f3ad2e`，本地与 `origin/main` 一致，工作树干净                                                                                                          | PR #2 合并（`5f3ad2e`）后 fast-forward                                            |
-| 2   | worktree 列表仍有残留、`chore-p0-hardening` 目录残缺                | 仅 2 个 worktree（主仓库 + `docs-p0-report-and-corrections`），残留目录已不存在                                                                                  | PR #2 修好长路径删除后清理完成                                                    |
-| 3   | "PR #1 的 CI 结果待定"                                              | run `38706529383`，success 36s                                                                                                                                   | 已有结论（§8）                                                                    |
-| 4   | CI 共 3 次 run                                                      | 共 **5 次** run 全 success：49 / 36 / 45 / 48 / 53s                                                                                                              | PR #2 追加 `38707513532`、`38707655187`（§8）                                     |
-| 5   | job `verify` "10 个步骤"                                            | 每次 **14 个 step** = 1 平台 + 9 业务 + 4 post/complete                                                                                                          | §8 已修正（旧说法作废）                                                           |
-| 6   | `.githooks` 在主工作区不生效                                        | 主工作区已快进到 `5f3ad2e`，钩子在本地真实生效                                                                                                                   | fast-forward 解决（§6）                                                           |
-| 7   | worktree 脚本"实测由 Lead 声明"，`sync` 未实测                      | `remove` 曾被 qa-verifier 独立复现 **FAIL**（标量索引 bug + 长路径残留 643 文件），PR #1/#2 修复后在最终 main 复测通过                                           | §10.2-3/4；`sync` 仍未实测（§1.2）                                                |
-| 8   | "typecheck 10/10、build 9/9、`pnpm verify` 退出码 0" 仅单方本地实测 | 本地可能是 Turbo 缓存重放；冷缓存证据为 CI + `--force` 复跑                                                                                                      | qa-verifier 指出，§9 方法学提醒                                                   |
-| 9   | 未涉及许可证与密钥                                                  | 146/149 许可证分布、无 GPL/AGPL、`pnpm audit` 0 漏洞、密钥扫描 0 命中；root-only 口径会漏 16 个包                                                                | license-auditor 结论，§5.1 与 `security.md` 记录                                  |
-| 10  | 事实清单称 "5 处 `docs/reports` 引用死链"                           | 实测 **4 处**匹配：`README.md:67`、`docs/agents/COLLABORATION.md:87`、`docs/architecture/security.md:87`、`AGENTS.md:59`（目录说明而非链接）                     | 本 PR 提交报告后全部可解析；计数差异如实记录                                      |
-| 11  | 事实清单称 PR #2 的 CI 为 44s；PR #3 "尚未合并"                     | 逐 run 实测：`38707513532` = **48s**、`38707655187` = 53s；`gh pr list --state all` 仅返回 #1/#2，**尚无 PR #3**，分支 `docs/p0-report-and-corrections` 也未推送 | §8 按实测耗时写；§5 明确标注 PR #3 尚未创建（需推送分支并建 PR 后才成立）         |
-| 12  | 事实清单把 preload/IPC 归入"已配置但未验证"                         | 该项**未实现**，仅有架构约束文本                                                                                                                                 | 按事实清单归位到 §1.2，但在表格中明确标注"桥未实现、无可验证行为"（§10.1 亦列出） |
+| #   | 旧版（16:39 快照）的说法                                            | 最终事实                                                                                                                                                               | 收敛方式                                                                          |
+| --- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| 1   | main 停在 `97530e6`/`55637b0`，主工作区 `behind 2`                  | main = `5f3ad2e`，本地与 `origin/main` 一致，工作树干净                                                                                                                | PR #2 合并（`5f3ad2e`）后 fast-forward                                            |
+| 2   | worktree 列表仍有残留、`chore-p0-hardening` 目录残缺                | 仅 2 个 worktree（主仓库 + `docs-p0-report-and-corrections`），残留目录已不存在                                                                                        | PR #2 修好长路径删除后清理完成                                                    |
+| 3   | "PR #1 的 CI 结果待定"                                              | run `38706529383`，success 36s                                                                                                                                         | 已有结论（§8）                                                                    |
+| 4   | CI 共 3 次 run                                                      | 共 **5 次** run 全 success：49 / 36 / 45 / 48 / 53s                                                                                                                    | PR #2 追加 `38707513532`、`38707655187`（§8）                                     |
+| 5   | job `verify` "10 个步骤"                                            | 每次 **14 个 step** = 1 平台 + 9 业务 + 4 post/complete                                                                                                                | §8 已修正（旧说法作废）                                                           |
+| 6   | `.githooks` 在主工作区不生效                                        | 主工作区已快进到 `5f3ad2e`，钩子在本地真实生效                                                                                                                         | fast-forward 解决（§6）                                                           |
+| 7   | worktree 脚本"实测由 Lead 声明"，`sync` 未实测                      | `remove` 曾被 qa-verifier 独立复现 **FAIL**（标量索引 bug + 长路径残留 643 文件），PR #1/#2 修复后在最终 main 复测通过                                                 | §10.2-3/4；`sync` 仍未实测（§1.2）                                                |
+| 8   | "typecheck 10/10、build 9/9、`pnpm verify` 退出码 0" 仅单方本地实测 | 本地可能是 Turbo 缓存重放；冷缓存证据为 CI + `--force` 复跑                                                                                                            | qa-verifier 指出，§9 方法学提醒                                                   |
+| 9   | 未涉及许可证与密钥                                                  | 146/149 许可证分布、无 GPL/AGPL、`pnpm audit` 0 漏洞、密钥扫描 0 命中；root-only 口径会漏 16 个包                                                                      | license-auditor 结论，§5.1 与 `security.md` 记录                                  |
+| 10  | 事实清单称 "5 处 `docs/reports` 引用死链"                           | 实测 **4 处**匹配：`README.md:67`、`docs/agents/COLLABORATION.md:87`、`docs/architecture/security.md:87`、`AGENTS.md:59`（目录说明而非链接）                           | 本 PR 提交报告后全部可解析；计数差异如实记录                                      |
+| 11  | 事实清单称 PR #2 的 CI 为 44s；PR #3 "尚未合并"                     | 逐 run 实测：`38707513532` = **48s**、`38707655187` = 53s；`gh pr list --state all` 仅返回 #1/#2，**随后已创建 PR #3**（`docs/p0-report-and-corrections` @ `ad69300`） | §8 按实测耗时写；§5 明确标注 PR #3 尚未创建（需推送分支并建 PR 后才成立）         |
+| 12  | 事实清单把 preload/IPC 归入"已配置但未验证"                         | 该项**未实现**，仅有架构约束文本                                                                                                                                       | 按事实清单归位到 §1.2，但在表格中明确标注"桥未实现、无可验证行为"（§10.1 亦列出） |
 
 除上述条目外，提交统计、版本号、仓库可见性、403 结论、测试用例数与 CLI 行为均已实测复核，与事实清单一致。
 
