@@ -15,6 +15,7 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
+import { stripVTControlCharacters } from 'node:util';
 import { _electron as electron } from 'playwright-core';
 
 const appRoot = process.cwd();
@@ -77,7 +78,7 @@ function startDevServer() {
   child.ready = false;
   child.stdout.on('data', (chunk) => {
     output += String(chunk);
-    child.ready = output.includes(devServerUrl);
+    child.ready = stripVTControlCharacters(output).includes(devServerUrl);
     process.stdout.write(`[vite] ${chunk}`);
   });
   child.stderr.on('data', (chunk) => process.stderr.write(`[vite] ${chunk}`));
