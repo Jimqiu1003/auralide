@@ -101,11 +101,32 @@ Refusals you should expect (they are intentional):
 
 There is deliberately **no** `--force`: recovery is always possible, accidental data loss is not.
 
+**Remove before you merge.** `gh pr merge --delete-branch` deletes the _remote_ branch, then tries to
+clean up the local worktree itself — on Windows it drops the worktree record and the local branch
+while leaving `apps/`, `packages/` and `node_modules/` behind, because those paths exceed
+`MAX_PATH` (observed twice with PR #2 and PR #3). The leftovers are no longer registered
+worktrees, so `remove` cannot see them. The reliable order is:
+
+```powershell
+# 1. merge (CI already green), WITHOUT --delete-branch
+gh pr merge <n> --merge
+# 2. fast-forward the main worktree, then remove the worktree and its branch
+git -C 'D:\01_Projects\01_MyProjects\Auralide Dev' pull --ff-only
+pnpm worktree -- remove -Name feat-core-schema
+# 3. optionally delete the remote branch that the merge left behind
+git push origin --delete feat-core-schema
+```
+
 ### 6. Keep the shared state tidy
 
 ```powershell
-pnpm worktree -- sync     # fetch, report ahead/behind, prune stale records
+pnpm worktree -- sync     # fetch, report ahead/behind, prune stale records, report orphans
 ```
+
+`sync` also lists directories in the worktree root that are **not** registered worktrees and contain
+no `.git` — the signature left behind by the merge above or by a failed deletion. They are reported,
+never deleted; the command prints the `cmd /c rmdir /s /q "\\?\<path>"` line that removes one once
+you have checked its contents.
 
 ## Notes
 
