@@ -376,6 +376,33 @@ try {
 
         Write-Output '=== pruning stale worktree records ==='
         Invoke-Git -Repository $mainWorktree -Arguments @('worktree', 'prune', '--verbose') | ForEach-Object { Write-Output "  $_" }
+
+        Write-Output '=== checking for orphaned worktree directories ==='
+        # `gh pr merge --delete-branch` and a failed `git worktree remove` can drop a directory from
+        # the worktree list while leaving its deep paths (apps/, packages/, node_modules/) behind.
+        # Orphans are only reported here, never deleted: the worktree root may hold something that
+        # does not belong to this script.
+        $registered = @($worktrees | ForEach-Object { [System.IO.Path]::GetFullPath($_.Path).TrimEnd('\', '/') })
+        $orphans = @()
+        if (Test-Path -LiteralPath $WorktreeRoot) {
+            foreach ($directory in Get-ChildItem -LiteralPath $WorktreeRoot -Directory -Force) {
+                $candidate = [System.IO.Path]::GetFullPath($directory.FullName).TrimEnd('\', '/')
+                if ($registered -contains $candidate) { continue }
+                if (Test-Path -LiteralPath (Join-Path $candidate '.git')) { continue }
+                $orphans += $candidate
+            }
+        }
+        if ($orphans.Count -eq 0) {
+            Write-Output '  none'
+        }
+        else {
+            Write-Output "  $($orphans.Count) directory(ies) that are not a registered worktree and contain no .git:"
+            foreach ($orphan in $orphans) {
+                Write-Output "    $orphan"
+                Write-Output ("      recover with: cmd /c rmdir /s /q `"\\?\$orphan`"")
+            }
+            Write-Output '  (nothing was deleted; check the contents before removing anything)'
+        }
         Write-Output 'Sync complete.'
         }
     }
