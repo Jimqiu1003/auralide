@@ -79,7 +79,9 @@ function Invoke-Git {
     if ($LASTEXITCODE -ne 0) {
         throw "git $($Arguments -join ' ') failed in '$Repository':`n$($output -join "`n")"
     }
-    return @($output)
+    # The leading comma stops PowerShell from unrolling a single-element array, so callers can
+    # rely on the result always being an array of lines.
+    return , @($output)
 }
 
 function Get-WorktreeEntries {
@@ -124,6 +126,20 @@ function Get-WorktreeState {
         Ahead      = $ahead
         Behind     = $behind
     }
+}
+
+function Get-CommitDistance {
+    param(
+        [Parameter(Mandatory)][string]$Repository,
+        [Parameter(Mandatory)][string]$Range
+    )
+
+    $raw = (Invoke-Git -Repository $Repository -Arguments @('rev-list', '--count', $Range))[0]
+    $value = 0
+    if (-not [int]::TryParse($raw, [ref]$value)) {
+        throw "Unexpected 'git rev-list --count $Range' output: '$raw'"
+    }
+    return $value
 }
 
 function Resolve-WorktreeTarget {
@@ -174,7 +190,8 @@ $mainWorktree = $worktrees[0].Path
 
 # --- commands ------------------------------------------------------------------------------------
 
-switch ($Command) {
+try {
+    switch ($Command) {
     'status' {
         $state = Get-WorktreeState -Path $mainWorktree
         $branch = (Invoke-Git -Repository $mainWorktree -Arguments @('branch', '--show-current'))[0]
@@ -246,15 +263,15 @@ switch ($Command) {
         if (-not $Name) { throw "Command 'check' requires -Name <branch|directory>." }
         $entry = Resolve-WorktreeTarget -Repository $mainWorktree -Requested $Name
         $state = Get-WorktreeState -Path $entry.Path
-        $unmerged = @(Invoke-Git -Repository $mainWorktree -Arguments @('rev-list', '--count', "$Base..$($entry.Branch)"))
+        $unmerged = Get-CommitDistance -Repository $mainWorktree -Range "$Base..$($entry.Branch)"
 
         Write-Output "Worktree : $($entry.Path)"
         Write-Output "Branch   : $($entry.Branch)"
         Write-Output "State    : $(if ($state.IsClean) { 'clean' } else { "dirty ($($state.Changes.Count) change(s))" })"
         if (-not $state.IsClean) { $state.Changes | ForEach-Object { Write-Output "  $_" } }
         Write-Output "Sync     : $(if ($state.Upstream) { "$($state.Upstream) (ahead $($state.Ahead), behind $($state.Behind))" } else { 'no upstream' })"
-        Write-Output "Commits not in ${Base}: $($unmerged[0])"
-        Write-Output "Removable: $(if ($state.IsClean -and [int]$unmerged[0] -eq 0) { 'yes' } elseif ($state.IsClean) { 'only with -AllowUnmerged' } else { 'no (uncommitted changes)' })"
+        Write-Output "Commits not in ${Base}: $unmerged"
+        Write-Output "Removable: $(if ($state.IsClean -and $unmerged -eq 0) { 'yes' } elseif ($state.IsClean) { 'only with -AllowUnmerged' } else { 'no (uncommitted changes)' })"
     }
 
     'remove' {
@@ -270,7 +287,7 @@ switch ($Command) {
             throw 'worktree removal aborted: dirty working tree'
         }
 
-        $unmerged = [int](Invoke-Git -Repository $mainWorktree -Arguments @('rev-list', '--count', "$Base..$($entry.Branch)"))[0]
+        $unmerged = Get-CommitDistance -Repository $mainWorktree -Range "$Base..$($entry.Branch)"
         if ($unmerged -gt 0 -and -not $AllowUnmerged) {
             throw "Branch '$($entry.Branch)' has $unmerged commit(s) not merged into '$Base'. Merge them, or re-run with -AllowUnmerged."
         }
@@ -307,5 +324,12 @@ switch ($Command) {
         Write-Output '=== pruning stale worktree records ==='
         Invoke-Git -Repository $mainWorktree -Arguments @('worktree', 'prune', '--verbose') | ForEach-Object { Write-Output "  $_" }
         Write-Output 'Sync complete.'
+        }
     }
+}
+catch {
+    # A refusal (dirty worktree, unmerged branch, unsafe path, unknown name) is a normal outcome:
+    # report it as one line and exit non-zero instead of dumping a PowerShell exception trace.
+    Write-Output "ERROR: $($_.Exception.Message)"
+    exit 1
 }
