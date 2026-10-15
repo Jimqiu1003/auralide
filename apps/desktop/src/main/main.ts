@@ -9,6 +9,7 @@ import { IPC, IPC_ALLOW_LIST } from '../shared/channels.js';
 import { describeIssues, pingRequestSchema } from '../shared/schemas.js';
 import { dispatchDocumentCommand, getDocument } from './document-session.js';
 import { applicationMenuTemplate } from './platform.js';
+import { BrowserController } from '../aura/browser-controller.js';
 import { isTrustedRendererUrl, validateDevServerUrl } from './security.js';
 
 /**
@@ -34,6 +35,7 @@ const trustedRendererUrl = devServerUrl || pathToFileURL(rendererEntry).href;
 const isTrustedUrl = (url: string): boolean => isTrustedRendererUrl(url, trustedRendererUrl);
 
 let mainWindow: BrowserWindow | null = null;
+let aura: BrowserController | null = null;
 
 /** Derives every fact the renderer is allowed to see from the running process, never from input. */
 const runtimeInfo = (): RuntimeInfo => ({
@@ -103,7 +105,7 @@ const handlePing = (payload: unknown): PingResponse => {
   };
 };
 
-/** Applied to every `webContents` in the process, including any future one. */
+/** Trusted shell policy; Aura guests receive their separate deny-by-default policy. */
 const guardContents = (contents: WebContents): void => {
   contents.on('will-frame-navigate', (event) => {
     if (!event.isMainFrame || !isTrustedUrl(event.url)) {
@@ -134,10 +136,6 @@ const guardContents = (contents: WebContents): void => {
   });
 };
 
-app.on('web-contents-created', (_event, contents) => {
-  guardContents(contents);
-});
-
 /**
  * Creates the single application window. The `webPreferences` below are the security posture
  * described in ADR-0002 §2 and docs/architecture/security.md §3 — do not relax them to make
@@ -161,12 +159,17 @@ const createWindow = (): BrowserWindow => {
     },
   });
 
+  guardContents(window.webContents);
+  aura = new BrowserController(window, getDocument);
+
   window.once('ready-to-show', () => {
     window.show();
   });
 
   window.on('closed', () => {
     if (mainWindow === window) {
+      aura?.dispose();
+      aura = null;
       mainWindow = null;
     }
   });
@@ -212,6 +215,16 @@ if (!app.requestSingleInstanceLock()) {
     handle(IPC.applyCommand, z.tuple([z.unknown()]), ([command]) =>
       dispatchDocumentCommand(command),
     );
+    handle(
+      IPC.auraInvoke,
+      z.tuple([z.unknown()]),
+      ([request]) =>
+        aura?.invoke(request) ?? {
+          ok: false,
+          error: { code: 'runtime-error', message: 'Aura runtime unavailable.' },
+        },
+    );
+    handle(IPC.auraBounds, z.tuple([z.unknown()]), ([bounds]) => aura?.setBounds(bounds) ?? false);
 
     // One line of machine-readable startup evidence, also asserting which path was taken.
     process.stdout.write(

@@ -41,7 +41,7 @@ It launches a **real window** (Playwright's Electron driver), asserts the render
 preload surface, the allow-listed ping, the refusal path, the console for CSP violations, and the
 per-mode policy; then writes `test-artifacts/<mode>.png` (screenshot) and `test-artifacts/<mode>.json`
 (machine-readable evidence: checks, console log, main-process startup line). It needs a desktop
-session and is deliberately **not** part of `pnpm verify` / CI.
+session and is separate from `pnpm verify`; native Windows x64/macOS ARM64 CI runs it explicitly.
 
 ## Content Security Policy
 
@@ -65,3 +65,7 @@ built `dist/renderer/index.html` stays strict, the served dev page carries the d
 | A second `pnpm start` seems to do nothing                         | `app.requestSingleInstanceLock()` focuses the running instance instead of opening a second one.                                               |
 | `error during build: Rolldown failed to resolve "@auralide/core"` | `@auralide/core` was not built. Build it first, or build through turbo (`pnpm build`), which orders dependencies.                             |
 | `vite` fails with "port already in use"                           | `strictPort: true` on purpose: another dev server is running. Stop it or change the port **and** the dev CSP together.                        |
+
+## Aura Browser POC
+
+Run pnpm build from the repository root, then start the desktop as above. Choose **Preview Core slide** or **HTML Lab fixture**. Inspect the stable element, capture the preview, resize the pane and test a shell overlay. Edit through the existing document workbench and render again to refresh the revision. Arbitrary HTML, URLs, scripts and assets are unavailable. See [Aura architecture](../../docs/architecture/aura-browser.md) and [tool contract](../../docs/architecture/agent-browser-contract.md).
