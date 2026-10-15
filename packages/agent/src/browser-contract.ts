@@ -13,7 +13,7 @@ export const auraRequestSchema = z.discriminatedUnion('tool', [
   z.strictObject({ tool: z.literal('preview.getDiagnostics'), input: z.strictObject(tabRevision) }),
   z.strictObject({ tool: z.literal('preview.screenshot'), input: z.strictObject(tabRevision) }),
 ]);
-export type AuraRequest = z.infer<typeof auraRequestSchema>;
+export type AuraRequest = z.input<typeof auraRequestSchema>;
 export interface AuraTab { readonly id: string; readonly mode: 'slide-preview' | 'html-lab'; readonly revision: number; readonly slideId: string | null }
 export interface AuraElement { readonly id: string; readonly tag: string; readonly text: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number }
 export interface AuraDiagnostics { readonly tabId: string; readonly revision: number; readonly mode: AuraTab['mode']; readonly elementCount: number; readonly scriptCount: number; readonly title: string; readonly currentRevision: number; readonly stale: boolean; readonly bounds: { readonly x: number; readonly y: number; readonly width: number; readonly height: number }; readonly minimized: boolean; readonly visible: boolean }

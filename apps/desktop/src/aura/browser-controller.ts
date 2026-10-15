@@ -3,14 +3,16 @@ import { randomUUID } from 'node:crypto';
 import { auraRequestSchema } from '@auralide/agent';
 import type { AuraAuditEntry, AuraData, AuraDiagnostics, AuraElement, AuraErrorCode, AuraRequest, AuraResult, AuraTab } from '@auralide/agent';
 import type { Presentation } from '@auralide/core';
+import { renderSlideHtml } from '@auralide/renderer';
 import { session, WebContentsView } from 'electron';
 import type { BrowserWindow } from 'electron';
 
 import { auraBoundsSchema, clipBounds } from './policy.js';
 import type { AuraBounds } from './policy.js';
-import { LAB_HTML, renderSlideHtml } from './render.js';
+import { LAB_HTML } from './render.js';
 
 interface Tab { readonly info: AuraTab; readonly view: WebContentsView }
+const partitions = { 'slide-preview': `aura-preview-${randomUUID()}`, 'html-lab': `aura-lab-${randomUUID()}` };
 const fail = (code: AuraErrorCode, message: string): AuraResult => ({ ok: false, error: { code, message } });
 const success = (value: AuraData): AuraResult => ({ ok: true, value });
 // Fixed inspection code only: no caller-supplied JavaScript or selector crosses this boundary.
@@ -26,6 +28,7 @@ export class BrowserController {
   private bounds: AuraBounds = { x: 0, y: 0, width: 0, height: 0, visible: false };
   private pending: Promise<unknown> = Promise.resolve();
   private readonly audit: AuraAuditEntry[] = [];
+  private readonly sessions = new Map<AuraTab['mode'], ReturnType<typeof session.fromPartition>>();
   private readonly sync = (): void => {
     if (this.disposed || this.window.isDestroyed()) return;
     const [width = 0, height = 0] = this.window.getContentSize();
@@ -33,6 +36,10 @@ export class BrowserController {
     const clipped = clipBounds({ ...this.bounds, x: Math.round(this.bounds.x * zoom), y: Math.round(this.bounds.y * zoom), width: Math.round(this.bounds.width * zoom), height: Math.round(this.bounds.height * zoom) }, width, height);
     for (const [id, tab] of this.tabs) {
       tab.view.setBounds({ x: clipped.x, y: clipped.y, width: clipped.width, height: clipped.height });
+      if (tab.info.mode === 'slide-preview' && clipped.width > 0 && clipped.height > 0) {
+        const size = this.getDocument().slideSize;
+        tab.view.webContents.setZoomFactor(Math.max(0.1, Math.min(clipped.width / size.width, clipped.height / size.height)));
+      }
       tab.view.setVisible(id === this.activeId && clipped.visible && clipped.width > 0 && clipped.height > 0 && !this.window.isMinimized());
     }
   };
@@ -74,12 +81,17 @@ export class BrowserController {
     const previous = [...this.tabs.values()].find((tab) => tab.info.mode === mode);
     if (previous !== undefined) this.close(previous.info.id);
     const id = `aura-${++this.sequence}`;
-    const isolatedSession = session.fromPartition(`aura-${mode}-${randomUUID()}`, { cache: false });
+    let isolatedSession = this.sessions.get(mode);
+    if (isolatedSession === undefined) {
+      isolatedSession = session.fromPartition(partitions[mode], { cache: false });
+      this.sessions.set(mode, isolatedSession);
+      isolatedSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+      isolatedSession.setPermissionCheckHandler(() => false);
+      isolatedSession.setDevicePermissionHandler(() => false);
+      isolatedSession.removeAllListeners('will-download');
+      isolatedSession.on('will-download', (event) => event.preventDefault());
+    }
     const url = `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
-    isolatedSession.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-    isolatedSession.setPermissionCheckHandler(() => false);
-    isolatedSession.setDevicePermissionHandler(() => false);
-    isolatedSession.on('will-download', (event) => event.preventDefault());
     isolatedSession.webRequest.onBeforeRequest((details, callback) => callback({ cancel: details.url !== url || details.resourceType !== 'mainFrame' }));
     const view = new WebContentsView({ webPreferences: { session: isolatedSession, contextIsolation: true, nodeIntegration: false, sandbox: true, webSecurity: true, webviewTag: false, navigateOnDragDrop: false, devTools: false } });
     const contents = view.webContents;

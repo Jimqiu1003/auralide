@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { CommandEnvelope, CommandError, Presentation, Result } from '@auralide/core';
+import type { AuraRequest, AuraResult } from '@auralide/agent';
 
 import type { AuralideApi, PingRequest, PingResponse, RuntimeInfo } from '../shared/api.js';
 import { BRIDGE_GLOBAL, BRIDGE_VERSION, IPC } from '../shared/channels.js';
@@ -23,6 +24,9 @@ const api: AuralideApi = Object.freeze({
   getDocument: (): Promise<Presentation> => ipcRenderer.invoke(IPC.getDocument),
   applyCommand: (command: CommandEnvelope): Promise<Result<Presentation, CommandError>> =>
     ipcRenderer.invoke(IPC.applyCommand, command),
+  auraInvoke: (request: AuraRequest): Promise<AuraResult> => ipcRenderer.invoke(IPC.auraInvoke, request),
+  auraSetBounds: (bounds: Parameters<AuralideApi['auraSetBounds']>[0]): Promise<boolean> =>
+    ipcRenderer.invoke(IPC.auraBounds, bounds),
 });
 
 contextBridge.exposeInMainWorld(BRIDGE_GLOBAL, api);

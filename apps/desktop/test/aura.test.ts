@@ -2,12 +2,13 @@ import { EventEmitter } from 'node:events';
 
 import { auraRequestSchema } from '@auralide/agent';
 import { presentationSchema } from '@auralide/core';
+import { PREVIEW_CSP, renderSlideHtml } from '@auralide/renderer';
 import type { BrowserWindow } from 'electron';
 import { describe, expect, it, vi } from 'vitest';
 
 import { BrowserController } from '../src/aura/browser-controller.js';
 import { auraBoundsSchema, clipBounds } from '../src/aura/policy.js';
-import { LAB_HTML, PREVIEW_CSP, renderSlideHtml } from '../src/aura/render.js';
+import { LAB_HTML } from '../src/aura/render.js';
 
 const guest = vi.hoisted(() => ({ preferences: [] as Record<string, unknown>[], sessions: [] as string[] }));
 vi.mock('electron', async () => {
@@ -15,12 +16,12 @@ vi.mock('electron', async () => {
   return {
     session: { fromPartition: (partition: string) => {
       guest.sessions.push(partition);
-      return { setPermissionRequestHandler: vi.fn(), setPermissionCheckHandler: vi.fn(), setDevicePermissionHandler: vi.fn(), on: vi.fn(), webRequest: { onBeforeRequest: vi.fn() } };
+      return { setPermissionRequestHandler: vi.fn(), setPermissionCheckHandler: vi.fn(), setDevicePermissionHandler: vi.fn(), on: vi.fn(), removeAllListeners: vi.fn(), webRequest: { onBeforeRequest: vi.fn() } };
     } },
     WebContentsView: class {
       private bounds = { x: 0, y: 0, width: 0, height: 0 };
       private visible = false;
-      readonly webContents = Object.assign(new Events(), { setWindowOpenHandler: vi.fn(), loadURL: vi.fn(async () => {}), isDestroyed: vi.fn(() => false), close: vi.fn(), executeJavaScript: vi.fn(async () => ({ elementCount: 1, scriptCount: 0, title: 'Preview' })) });
+      readonly webContents = Object.assign(new Events(), { setWindowOpenHandler: vi.fn(), setZoomFactor: vi.fn(), loadURL: vi.fn(async () => {}), isDestroyed: vi.fn(() => false), close: vi.fn(), executeJavaScript: vi.fn(async () => ({ elementCount: 1, scriptCount: 0, title: 'Preview' })) });
       constructor(options: { webPreferences: Record<string, unknown> }) { guest.preferences.push(options.webPreferences); }
       setBounds(bounds: typeof this.bounds): void { this.bounds = bounds; }
       getBounds(): typeof this.bounds { return this.bounds; }
