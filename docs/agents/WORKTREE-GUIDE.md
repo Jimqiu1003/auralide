@@ -115,3 +115,23 @@ pnpm worktree -- sync     # fetch, report ahead/behind, prune stale records
   invalidate each other.
 - A worktree that is no longer needed but has unmerged work should be _kept_, not forced away: push
   the branch, then open a PR.
+- **Windows long paths.** A worktree that ran `pnpm install` contains paths beyond the
+  260-character `MAX_PATH` limit (measured: 263–266 characters). Git only deletes such trees when
+  `core.longpaths` is on, so the script passes `-c core.longpaths=true` to every git call.
+  Measured behaviour, verified on this repository:
+  - `git worktree remove` can **exit 0 while leaving hundreds of files behind** (643 files in a
+    tree whose longest path was 266 characters), so `remove` never trusts the exit code: it checks
+    the filesystem, finishes the deletion with a `\\?\`-prefixed `rmdir`, then runs
+    `git worktree prune`. `gh pr merge --delete-branch` has the same problem and skips the local
+    branch deletion.
+  - Without `core.longpaths`, git fails earlier with `Filename too long` and still deletes part of
+    the tree, which leaves a half-removed directory. Enabling it for this repository is recommended:
+
+  ```powershell
+  git config core.longpaths true   # repository-local, not global
+  ```
+
+- **Never run `remove` from inside the worktree you are removing.** A process whose current
+  directory is inside a tree prevents its deletion on Windows (`rmdir` exit 32). The script steps
+  out of the target when _it_ is the process holding it, but it cannot release a parent shell's
+  handle — it reports that case explicitly instead of failing silently.
