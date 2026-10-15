@@ -7,8 +7,7 @@
 # 0 approving reviews during the single-maintainer phase, so CODEOWNERS is documentation and a
 # review-request hint today. It starts to matter only when the ruleset asks for approvals.
 #
-# The Compatibility & QA engineer's GitHub handle is not recorded yet; their zones are temporarily
-# owned by the Lead and marked TODO so the file stays valid. See issue "P1.0" / "QA-1".
+# QA identity confirmed by the owner; repository write permission verified on 2026-10-15.
 
 # Default: the Lead owns everything not listed below.
 *                       @Jimqiu1003
@@ -31,6 +30,6 @@
 /.github/               @Jimqiu1003
 /docs/decisions/        @Jimqiu1003
 
-# Compatibility & QA engineer (TODO: replace with their handle once known)
-/tests/fixtures/html/   @Jimqiu1003
-/docs/qa/               @Jimqiu1003
+# Compatibility & QA engineer (Issue #18)
+/tests/fixtures/html/   @Lsc-91-69
+/docs/qa/               @Lsc-91-69

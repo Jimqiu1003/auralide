@@ -19,6 +19,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@auralide/core": "workspace:*"
+    "@auralide/core": "workspace:*",
+    "zod": "^4.6.7"
   }
 }

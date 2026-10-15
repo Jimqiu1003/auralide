@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { stripVTControlCharacters } from 'node:util';
 import { _electron as electron } from 'playwright-core';
+import { auraProbes } from './aura.probes.mjs';
 
 const appRoot = process.cwd();
 const artifacts = join(appRoot, 'test-artifacts');
@@ -258,7 +259,7 @@ async function runMode(mode) {
     check(
       'bridge-version',
       await page.locator('[data-testid="bridge-version"]').textContent(),
-      '1.1.0',
+      '1.2.0',
     );
 
     // Renderer boundary: nothing but the frozen bridge is reachable.
@@ -279,7 +280,7 @@ async function runMode(mode) {
     check(
       'bridge keys',
       exposed.keys,
-      'applyCommand,bridgeVersion,getDocument,getRuntimeInfo,ping',
+      'applyCommand,auraInvoke,auraSetBounds,bridgeVersion,getDocument,getRuntimeInfo,ping',
     );
     checkTruthy('bridge is frozen', exposed.frozen);
 
@@ -410,6 +411,7 @@ async function runMode(mode) {
       finalText,
     );
     check('no Vite error overlay', await page.locator('vite-error-overlay').count(), 0);
+    await auraProbes(app, page, mode, artifacts, check);
 
     const cspViolations = consoleMessages.filter((message) =>
       /Content Security Policy|Refused to (load|execute|connect)/i.test(message),

@@ -82,3 +82,7 @@ tests/fixtures/   shared test fixtures
 ## License
 
 Apache-2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+
+## P1.5 preview
+
+Supported development targets are Windows x64 and macOS ARM64; see [platform contract](docs/architecture/platform-support.md). The bounded [Aura Browser POC](docs/architecture/aura-browser.md) adds a Core preview, reviewed HTML Lab fixture, stable-ID inspection and screenshot capture. It has no arbitrary page loading or script execution. Build the workspace before starting the desktop. The UI remains a diagnostic shell while [three workspace directions](docs/design/ui-architecture.md) await owner selection; design files arrive in the dependent UI PR.

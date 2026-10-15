@@ -1,6 +1,6 @@
 # Auralide Architecture Overview
 
-Status: **P1 — runtime & core foundation** (a really starting Electron shell and a structured document
+Status: **P1.5 — platform and isolated Aura Browser POC** (a really starting Electron shell and a structured document
 model with a validated command layer; still no editor UI).
 Phase plan: [`p1-plan.md`](p1-plan.md). Decisions: [`docs/decisions/`](../decisions/).
 
@@ -71,13 +71,13 @@ This is why `core` owns commands and history while `editor-ui` owns only present
 - The Electron main process is the only place with privileged APIs; the renderer talks to it through
   an explicit, validated bridge (added in P1 with a preload script).
 
-## 5. Storage (design commitment, implemented in P1)
+## 5. Storage (future design commitment; not implemented)
 
 Local-first: documents are files on disk owned by the user.
 
 - A project is a directory (or an archive) containing a structured document file plus assets.
 - The structured model is the source of truth; rendered HTML is derived.
-- History/versioning is append-only and stored next to the document, never only in memory.
+- Future persistent history must be stored with the document. Current P1/P1.5 history and documents are in memory and are discarded on application exit.
 - No Auralide server is required to open, edit or export a document.
 
 ## 6. Technology baseline

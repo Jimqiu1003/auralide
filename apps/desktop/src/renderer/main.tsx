@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 
 import type { RuntimeInfo } from '../shared/api.js';
 import { DocumentPreview } from './document-preview.js';
+import { AuraPoc } from './aura-poc.js';
 
 import './styles.css';
 
@@ -78,6 +79,7 @@ function Diagnostics(): JSX.Element {
       <h1 data-testid="app-name">{PRODUCT_NAME}</h1>
       <p className="subtitle">A structured presentation, edited through one command path.</p>
 
+      <AuraPoc />
       <DocumentPreview />
 
       <dl className="facts">
