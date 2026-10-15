@@ -534,7 +534,7 @@ describe('revision conflicts', () => {
     expect(state.document.slides[0]?.elements).toHaveLength(2);
   });
 
-  it('accepts the next command after an undo, because the revision went back', () => {
+  it('rejects a pre-undo revision and accepts the fresh revision', () => {
     const state = createState();
     const first = applyOk(
       state,
@@ -542,7 +542,32 @@ describe('revision conflicts', () => {
     );
     const undone = undoOk(first.state);
 
-    expect(undone.document.revision).toBe(0);
+    expect(undone.document.revision).toBe(2);
+    for (const expectedRevision of [0, 1]) {
+      expect(
+        applyErr(
+          undone,
+          command(
+            'slide.create',
+            { kind: 'presentation' },
+            { id: 'slide_stale' },
+            { expectedRevision },
+          ),
+        ).code,
+      ).toBe('stale-revision');
+    }
+    const redone = redoOk(undone);
+    expect(
+      applyErr(
+        redone,
+        command(
+          'slide.create',
+          { kind: 'presentation' },
+          { id: 'slide_stale' },
+          { expectedRevision: 2 },
+        ),
+      ).code,
+    ).toBe('stale-revision');
 
     const second = applyOk(
       undone,
@@ -550,11 +575,11 @@ describe('revision conflicts', () => {
         'element.add',
         { kind: 'slide', slideId: 'slide_empty' },
         { element: textElement('el_x') },
-        { expectedRevision: 0 },
+        { expectedRevision: 2 },
       ),
     );
 
-    expect(second.state.document.revision).toBe(1);
+    expect(second.state.document.revision).toBe(3);
     expect(second.state.document.slides[1]?.elements).toHaveLength(1);
   });
 });
@@ -603,6 +628,115 @@ describe('conflicts', () => {
 });
 
 describe('atomicity', () => {
+  it('rejects optional undefined in an added element without changing state', () => {
+    const state = createState();
+    const before = JSON.stringify(state);
+    expect(
+      applyErr(
+        state,
+        command(
+          'element.add',
+          { kind: 'slide', slideId: 'slide_empty' },
+          { element: { ...textElement('el_added'), style: { color: undefined } } },
+        ),
+      ).code,
+    ).toBe('invalid-payload');
+    expect(JSON.stringify(state)).toBe(before);
+  });
+
+  it('owns and freezes document, command and history references', () => {
+    const original = createDocument();
+    const state = createEditorState(original);
+    Object.assign(original, { title: 'Outside edit' });
+    expect(state.document.title).toBe('Auralide demo');
+    expect(Object.isFrozen(original)).toBe(false);
+    expect(() => Object.assign(state.document, { title: 'Tampered' })).toThrow(TypeError);
+
+    const element = textElement('el_added');
+    const origin = { kind: 'agent', id: 'planner' };
+    const input = command(
+      'element.add',
+      { kind: 'slide', slideId: 'slide_empty' },
+      { element },
+      { origin },
+    );
+    const result = applyOk(state, input);
+    element.text = 'Outside edit';
+    element.geometry.x = 123;
+    origin.id = 'spoofed';
+    expect(result.entry.origin.id).toBe('planner');
+    expect(result.state.document.slides[1]?.elements[0]).toMatchObject({
+      text: 'Text',
+      geometry: { x: 0 },
+    });
+    expect(() => Object.assign(result.entry.before, { title: 'Tampered' })).toThrow(TypeError);
+    expect(() =>
+      Object.assign(result.entry.after.slides[1]?.elements[0]?.geometry ?? {}, { x: 123 }),
+    ).toThrow(TypeError);
+    expect(() => Object.assign(result.state.history.entries, { length: 0 })).toThrow(TypeError);
+    expect(() => Object.assign(result.entry.target, { slideId: 'slide_intro' })).toThrow(TypeError);
+    expect(Object.isFrozen(undoOk(result.state).document)).toBe(true);
+    expect(Object.isFrozen(redoOk(undoOk(result.state)).document)).toBe(true);
+  });
+
+  it('requires an id for agent attribution', () => {
+    const state = createState();
+    for (const origin of [{ kind: 'agent' }, { kind: 'agent', id: '' }]) {
+      expect(
+        applyErr(
+          state,
+          command('slide.create', { kind: 'presentation' }, { id: 'slide_new' }, { origin }),
+        ).code,
+      ).toBe('invalid-payload');
+    }
+  });
+
+  it('refuses revision overflow on apply, undo and redo without changing state', () => {
+    const initial = createEditorState(
+      parseFixture({ ...documentInput(), revision: Number.MAX_SAFE_INTEGER - 1 }),
+    );
+    const created = applyOk(
+      initial,
+      command(
+        'slide.create',
+        { kind: 'presentation' },
+        { id: 'slide_limit' },
+        { expectedRevision: Number.MAX_SAFE_INTEGER - 1 },
+      ),
+    );
+    expect(presentationSchema.safeParse(created.state.document).success).toBe(true);
+    const before = JSON.stringify(created.state);
+    expect(
+      applyErr(
+        created.state,
+        command(
+          'slide.create',
+          { kind: 'presentation' },
+          { id: 'slide_overflow' },
+          { expectedRevision: Number.MAX_SAFE_INTEGER },
+        ),
+      ).code,
+    ).toBe('conflict');
+    expect(undo(created.state)).toMatchObject({ ok: false, error: { code: 'conflict' } });
+    const redoable = undoOk(
+      applyOk(
+        createEditorState(
+          parseFixture({ ...documentInput(), revision: Number.MAX_SAFE_INTEGER - 2 }),
+        ),
+        command(
+          'slide.create',
+          { kind: 'presentation' },
+          { id: 'slide_redo_limit' },
+          { expectedRevision: Number.MAX_SAFE_INTEGER - 2 },
+        ),
+      ).state,
+    );
+    const redoBefore = JSON.stringify(redoable);
+    expect(redo(redoable)).toMatchObject({ ok: false, error: { code: 'conflict' } });
+    expect(JSON.stringify(redoable)).toBe(redoBefore);
+    expect(JSON.stringify(created.state)).toBe(before);
+  });
+
   it('leaves the state byte-identical when a command fails', () => {
     const state = createState();
     const document = state.document;
@@ -668,13 +802,13 @@ describe('atomicity', () => {
     expect(JSON.stringify(state)).toBe(before);
     expect(state).toStrictEqual(snapshot);
     expect(state.document).toBe(document);
-    expect(result.state.document).not.toBe(document);
+    expect(result.state.document === document).toBe(false);
     expect(result.state.document.slides[0]?.elements).toHaveLength(1);
   });
 });
 
 describe('undo and redo', () => {
-  it('restores the exact previous document and re-applies it', () => {
+  it('restores and re-applies content while advancing the revision', () => {
     const state = createState();
     const created = applyOk(
       state,
@@ -682,8 +816,8 @@ describe('undo and redo', () => {
     );
     const undone = undoOk(created.state);
 
-    expect(undone.document).toStrictEqual(state.document);
-    expect(undone.document.revision).toBe(0);
+    expect(undone.document).toStrictEqual({ ...state.document, revision: 2 });
+    expect(undone.document.revision).toBe(2);
     expect(undone.history.cursor).toBe(0);
     expect(undone.history.entries).toHaveLength(1);
     expect(canUndo(undone)).toBe(false);
@@ -691,8 +825,8 @@ describe('undo and redo', () => {
 
     const redone = redoOk(undone);
 
-    expect(redone.document).toStrictEqual(created.state.document);
-    expect(redone.document.revision).toBe(1);
+    expect(redone.document).toStrictEqual({ ...created.state.document, revision: 3 });
+    expect(redone.document.revision).toBe(3);
     expect(redone.history.cursor).toBe(1);
     expect(canRedo(redone)).toBe(false);
     expect(canUndo(redone)).toBe(true);
@@ -748,22 +882,25 @@ describe('undo and redo', () => {
     expect(state.document.slides).toStrictEqual(initial.document.slides);
 
     for (let index = steps.length - 1; index >= 0; index -= 1) {
+      const revision = state.document.revision + 1;
       state = undoOk(state);
-      expect(state.document).toStrictEqual(
-        index === 0 ? initial.document : steps[index - 1]?.state.document,
-      );
+      expect(state.document).toStrictEqual({
+        ...(index === 0 ? initial.document : steps[index - 1]?.state.document),
+        revision,
+      });
     }
 
     expect(canUndo(state)).toBe(false);
-    expect(state.document).toStrictEqual(initial.document);
+    expect(state.document).toStrictEqual({ ...initial.document, revision: 12 });
 
     for (const step of steps) {
+      const revision = state.document.revision + 1;
       state = redoOk(state);
-      expect(state.document).toStrictEqual(step.state.document);
+      expect(state.document).toStrictEqual({ ...step.state.document, revision });
     }
 
     expect(canRedo(state)).toBe(false);
-    expect(state.document.revision).toBe(6);
+    expect(state.document.revision).toBe(18);
   });
 
   it('clears the redo stack when a new command is applied', () => {
@@ -787,7 +924,7 @@ describe('undo and redo', () => {
         'slide.create',
         { kind: 'presentation' },
         { id: 'slide_other' },
-        { expectedRevision: 0 },
+        { expectedRevision: 2 },
       ),
     );
 
@@ -804,13 +941,13 @@ describe('undo and redo', () => {
 
     const rolledBack = undoOk(replacement.state);
 
-    expect(rolledBack.document).toStrictEqual(undone.document);
+    expect(rolledBack.document).toStrictEqual({ ...undone.document, revision: 4 });
     expect(rolledBack.history.entries).toHaveLength(1);
 
     // Only the replacement is redoable: the discarded command is gone for good.
     const redone = redoOk(rolledBack);
 
-    expect(redone.document).toStrictEqual(replacement.state.document);
+    expect(redone.document).toStrictEqual({ ...replacement.state.document, revision: 5 });
     expect(redone.document.slides.map((slide) => slide.id)).toStrictEqual([
       'slide_intro',
       'slide_empty',
@@ -911,7 +1048,7 @@ describe('removing the last slide', () => {
     );
     const restored = undoOk(removed.state);
 
-    expect(restored.document).toStrictEqual(state.document);
+    expect(restored.document).toStrictEqual({ ...state.document, revision: 2 });
     expect(restored.document.slides[0]?.elements).toStrictEqual(state.document.slides[0]?.elements);
   });
 

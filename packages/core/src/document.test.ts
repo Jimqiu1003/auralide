@@ -204,6 +204,52 @@ describe('JSON round trip', () => {
 });
 
 describe('malformed input is rejected, never repaired', () => {
+  it('rejects explicit undefined in optional fields instead of losing it over JSON', () => {
+    rejects(documentWithSlide({ id: 'slide_a', name: undefined, elements: [] }));
+    rejects(
+      documentWithElement({
+        kind: 'text',
+        id: 'el_a',
+        text: 'Text',
+        geometry: { x: 0, y: 0, width: 10, height: 10 },
+        style: { color: undefined },
+      }),
+    );
+  });
+
+  it('rejects duplicate slide ids and element ids within or across slides', () => {
+    const element = {
+      kind: 'text',
+      id: 'el_duplicate',
+      text: 'Text',
+      geometry: { x: 0, y: 0, width: 10, height: 10 },
+    };
+    const cases = [
+      [
+        { id: 'slide_same', elements: [] },
+        { id: 'slide_same', elements: [] },
+      ],
+      [{ id: 'slide_a', elements: [element, element] }],
+      [
+        { id: 'slide_a', elements: [element] },
+        { id: 'slide_b', elements: [element] },
+      ],
+    ];
+    for (const slides of cases) {
+      const input = { ...documentInput(), slides };
+      rejects(input);
+      expect(parseFailureCode(JSON.stringify(input))).toBe('invalid-document');
+    }
+  });
+
+  it('returns a deeply frozen parsed document', () => {
+    const result = parseDocument(JSON.stringify(documentInput()));
+    if (!result.ok) throw new Error(result.error.message);
+    expect(Object.isFrozen(result.value)).toBe(true);
+    expect(Object.isFrozen(result.value.slides[0]?.elements[0]?.geometry)).toBe(true);
+    expect(() => Object.assign(result.value, { title: 'tampered' })).toThrow(TypeError);
+  });
+
   it('reports invalid JSON separately from an invalid document', () => {
     expect(parseFailureCode('{"schemaVersion":')).toBe('invalid-json');
     expect(parseFailureCode('')).toBe('invalid-json');

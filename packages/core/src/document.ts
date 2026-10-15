@@ -138,11 +138,16 @@ export type SlideSize = DeepReadonly<z.output<typeof slideSizeSchema>>;
 export const EDIT_ORIGIN_KINDS = ['human', 'agent', 'import', 'system'] as const;
 export type EditOriginKind = (typeof EDIT_ORIGIN_KINDS)[number];
 
-/** Recorded edit origin, optionally naming the actor (`agent:planner`, `human:jim`). */
-export const editOriginSchema = z.strictObject({
-  kind: z.enum(EDIT_ORIGIN_KINDS),
-  id: z.string().min(1).max(200).optional(),
-});
+/** Recorded edit origin; agent edits must name their actor. */
+export const editOriginSchema = z
+  .strictObject({
+    kind: z.enum(EDIT_ORIGIN_KINDS),
+    id: z.string().min(1).max(200).optional(),
+  })
+  .refine((origin) => origin.kind !== 'agent' || origin.id !== undefined, {
+    path: ['id'],
+    message: 'Agent edits require an actor id.',
+  });
 export type EditOrigin = DeepReadonly<z.output<typeof editOriginSchema>>;
 
 /** Monotonic document revision. Incremented by the dispatcher on every applied command. */
@@ -150,15 +155,63 @@ export const revisionSchema = z.int().min(0);
 export type Revision = z.output<typeof revisionSchema>;
 
 /** A whole presentation document. */
-export const presentationSchema = z.strictObject({
-  schemaVersion: z.literal(SCHEMA_VERSION),
-  id: presentationIdSchema,
-  title: z.string().max(500),
-  revision: revisionSchema,
-  slideSize: slideSizeSchema,
-  slides: z.array(slideSchema),
-});
+export const presentationSchema = z
+  .strictObject({
+    schemaVersion: z.literal(SCHEMA_VERSION),
+    id: presentationIdSchema,
+    title: z.string().max(500),
+    revision: revisionSchema,
+    slideSize: slideSizeSchema,
+    slides: z.array(slideSchema),
+  })
+  .superRefine((document, context) => {
+    const checkUndefined = (value: unknown, path: (string | number)[]): void => {
+      if (value === undefined) {
+        context.addIssue({ code: 'custom', path, message: 'Explicit undefined is not JSON data.' });
+      } else if (typeof value === 'object' && value !== null) {
+        for (const [key, child] of Object.entries(value)) {
+          checkUndefined(child, [...path, key]);
+        }
+      }
+    };
+    checkUndefined(document, []);
+
+    const slideIds = new Set<string>();
+    const elementIds = new Set<string>();
+
+    document.slides.forEach((slide, slideIndex) => {
+      if (slideIds.has(slide.id)) {
+        context.addIssue({
+          code: 'custom',
+          path: ['slides', slideIndex, 'id'],
+          message: 'Duplicate slide id.',
+        });
+      }
+      slideIds.add(slide.id);
+      slide.elements.forEach((element, elementIndex) => {
+        if (elementIds.has(element.id)) {
+          context.addIssue({
+            code: 'custom',
+            path: ['slides', slideIndex, 'elements', elementIndex, 'id'],
+            message: 'Duplicate element id.',
+          });
+        }
+        elementIds.add(element.id);
+      });
+    });
+  });
 export type Presentation = DeepReadonly<z.output<typeof presentationSchema>>;
+
+/** Freeze owned values so a caller cannot edit a document or its history through a reference. */
+export const freezeValue = <T>(value: T): T => {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) {
+      freezeValue(child);
+    }
+    Object.freeze(value);
+  }
+  return value;
+};
 
 /** Why a document could not be read. */
 export type DocumentErrorCode = 'invalid-json' | 'invalid-document';
@@ -191,7 +244,7 @@ export const parseDocument = (json: string): Result<Presentation, DocumentError>
     return err({ code: 'invalid-document', message: z.prettifyError(parsed.error) });
   }
 
-  return ok(parsed.data);
+  return ok(freezeValue(parsed.data));
 };
 
 /** Finds a slide by id, or `undefined` when the document has no such slide. */

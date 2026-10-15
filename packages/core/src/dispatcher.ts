@@ -20,7 +20,7 @@ import type {
   PresentationTarget,
   SlideTarget,
 } from './command.js';
-import { findElement } from './document.js';
+import { findElement, freezeValue, presentationSchema } from './document.js';
 import type { EditOrigin, Element, Presentation, Slide, TextElement } from './document.js';
 import { err, isErr, ok } from './result.js';
 import type { Result } from './result.js';
@@ -34,7 +34,7 @@ import type { Result } from './result.js';
  * 1. a command that fails validation leaves the state and the history byte-identical — the document
  *    it was given is never mutated, and no partially applied result exists;
  * 2. a successful command increments the document revision exactly once and records its origin;
- * 3. undo restores the previous document exactly (deep-equal, revision included), redo re-applies it,
+ * 3. undo restores previous content and redo re-applies it, each advancing the revision,
  *    and a new command clears the redo stack.
  */
 
@@ -79,10 +79,11 @@ export interface CommandResult {
 }
 
 /** Wraps a parsed document in an empty history. */
-export const createEditorState = (document: Presentation): EditorState => ({
-  document,
-  history: { entries: [], cursor: 0 },
-});
+export const createEditorState = (document: Presentation): EditorState =>
+  freezeValue({
+    document: presentationSchema.parse(document),
+    history: { entries: [], cursor: 0 },
+  });
 
 /** True when there is an applied command to undo. */
 export const canUndo = (state: EditorState): boolean => state.history.cursor > 0;
@@ -94,6 +95,11 @@ export const canRedo = (state: EditorState): boolean =>
 const invalidPayload = (message: string): CommandError => ({ code: 'invalid-payload', message });
 const targetNotFound = (message: string): CommandError => ({ code: 'target-not-found', message });
 const conflict = (message: string): CommandError => ({ code: 'conflict', message });
+
+const nextRevision = (document: Presentation): Result<number, CommandError> =>
+  document.revision < Number.MAX_SAFE_INTEGER
+    ? ok(document.revision + 1)
+    : err(conflict('Document revision has reached the safe integer limit.'));
 
 /** A validated command with its target already resolved against the current document. */
 type PendingCommand =
@@ -510,13 +516,22 @@ export const applyCommand = (
     });
   }
 
+  const revision = nextRevision(state.document);
+  if (isErr(revision)) {
+    return revision;
+  }
+
   const executed = execute(state.document, resolved.value);
 
   if (isErr(executed)) {
     return executed;
   }
 
-  const document: Presentation = { ...executed.value, revision: state.document.revision + 1 };
+  const parsed = presentationSchema.safeParse({ ...executed.value, revision: revision.value });
+  if (!parsed.success) {
+    return err(invalidPayload(`Invalid resulting document: ${z.prettifyError(parsed.error)}`));
+  }
+  const document: Presentation = parsed.data;
   const entry: HistoryEntry = {
     sequence: state.history.cursor + 1,
     revision: document.revision,
@@ -527,20 +542,22 @@ export const applyCommand = (
     after: document,
   };
 
-  return ok({
-    state: {
-      document,
-      history: {
-        // A new command invalidates everything that was undone: the redo stack is cleared.
-        entries: [...state.history.entries.slice(0, state.history.cursor), entry],
-        cursor: state.history.cursor + 1,
+  return ok(
+    freezeValue({
+      state: {
+        document,
+        history: {
+          // A new command invalidates everything that was undone: the redo stack is cleared.
+          entries: [...state.history.entries.slice(0, state.history.cursor), entry],
+          cursor: state.history.cursor + 1,
+        },
       },
-    },
-    entry,
-  });
+      entry,
+    }),
+  );
 };
 
-/** Reverts the newest applied command, restoring the previous document exactly. */
+/** Reverts the newest applied command's content at a fresh revision. */
 export const undo = (state: EditorState): Result<EditorState, CommandError> => {
   const entry = state.history.entries[state.history.cursor - 1];
 
@@ -548,10 +565,17 @@ export const undo = (state: EditorState): Result<EditorState, CommandError> => {
     return err({ code: 'nothing-to-undo', message: 'The history holds no command to undo.' });
   }
 
-  return ok({
-    document: entry.before,
-    history: { entries: state.history.entries, cursor: state.history.cursor - 1 },
-  });
+  const revision = nextRevision(state.document);
+  if (isErr(revision)) {
+    return revision;
+  }
+
+  return ok(
+    freezeValue({
+      document: { ...entry.before, revision: revision.value },
+      history: { entries: state.history.entries, cursor: state.history.cursor - 1 },
+    }),
+  );
 };
 
 /** Re-applies the newest undone command. */
@@ -562,8 +586,15 @@ export const redo = (state: EditorState): Result<EditorState, CommandError> => {
     return err({ code: 'nothing-to-redo', message: 'The history holds no command to redo.' });
   }
 
-  return ok({
-    document: entry.after,
-    history: { entries: state.history.entries, cursor: state.history.cursor + 1 },
-  });
+  const revision = nextRevision(state.document);
+  if (isErr(revision)) {
+    return revision;
+  }
+
+  return ok(
+    freezeValue({
+      document: { ...entry.after, revision: revision.value },
+      history: { entries: state.history.entries, cursor: state.history.cursor + 1 },
+    }),
+  );
 };
