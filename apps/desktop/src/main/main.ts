@@ -1,27 +1,150 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
+import type { IpcMainInvokeEvent, WebContents } from 'electron';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const currentDirectory = dirname(fileURLToPath(import.meta.url));
-const devServerUrl = process.env.AURALIDE_DEV_SERVER_URL;
+import type { LoadPath, PingResponse, RuntimeInfo } from '../shared/api.js';
+import { IPC, IPC_ALLOW_LIST } from '../shared/channels.js';
+import { describeIssues, pingRequestSchema } from '../shared/schemas.js';
 
 /**
- * Creates the single application window.
+ * Main process: the trusted side of the runtime.
  *
- * Security defaults are deliberate: imported HTML is untrusted, so the renderer never receives
- * Node.js access. See docs/architecture/security.md before changing these options.
+ * Two load paths exist (see ADR-0002 §1) and they differ in exactly one thing: where the renderer
+ * comes from. Security settings, the preload bridge, the IPC surface and the navigation guards are
+ * shared, so development cannot quietly run with a weaker posture than production.
  */
-function createWindow(): BrowserWindow {
+
+const currentDirectory = dirname(fileURLToPath(import.meta.url));
+const preloadPath = join(currentDirectory, 'preload.cjs');
+const rendererEntry = join(currentDirectory, '..', 'renderer', 'index.html');
+
+/** Set by `scripts/launch.mjs --dev`; its presence is what selects the development load path. */
+const devServerUrl = (process.env.AURALIDE_DEV_SERVER_URL ?? '').trim();
+const loadPath: LoadPath = devServerUrl === '' ? 'production' : 'development';
+
+/** The only URL space the application may navigate inside. */
+const trustedPrefix = ((): string => {
+  if (devServerUrl === '') {
+    return 'file://';
+  }
+  try {
+    return new URL(devServerUrl).origin;
+  } catch {
+    throw new Error(`AURALIDE_DEV_SERVER_URL is not a valid URL: ${devServerUrl}`);
+  }
+})();
+
+const isTrustedUrl = (url: string): boolean => url.startsWith(trustedPrefix);
+
+let mainWindow: BrowserWindow | null = null;
+
+/** Derives every fact the renderer is allowed to see from the running process, never from input. */
+const runtimeInfo = (): RuntimeInfo => ({
+  appName: app.getName(),
+  appVersion: app.getVersion(),
+  electronVersion: process.versions.electron ?? 'unknown',
+  chromeVersion: process.versions.chrome ?? 'unknown',
+  nodeVersion: process.versions.node,
+  platform: process.platform,
+  loadPath,
+});
+
+/**
+ * Gate 1 of the IPC boundary: a message is only served when it comes from the application's own
+ * window *and* from a frame inside the trusted URL space. Anything else rejects the caller's promise.
+ */
+const assertTrustedSender = (event: IpcMainInvokeEvent, channel: string): void => {
+  const frameUrl = event.senderFrame?.url ?? '';
+  const expectedSender = mainWindow?.webContents;
+  const fromApplicationWindow = expectedSender !== undefined && event.sender === expectedSender;
+  if (!fromApplicationWindow || !isTrustedUrl(frameUrl)) {
+    throw new Error(
+      `refused ${channel}: message did not come from the application window (frame=${frameUrl === '' ? 'unknown' : frameUrl})`,
+    );
+  }
+};
+
+type IpcHandler = (payload: unknown) => unknown;
+
+/**
+ * Gate 0 of the IPC boundary: only allow-listed channels get a handler. The parameter is typed
+ * `string` on purpose — the check must stay a real runtime check, not something the compiler
+ * already proved.
+ */
+const handle = (channel: string, handler: IpcHandler): void => {
+  if (!(IPC_ALLOW_LIST as readonly string[]).includes(channel)) {
+    throw new Error(
+      `refusing to register a handler for a non-allow-listed IPC channel: ${channel}`,
+    );
+  }
+  ipcMain.handle(channel, (event, payload: unknown) => {
+    assertTrustedSender(event, channel);
+    return handler(payload);
+  });
+};
+
+/** Gate 2: the payload is validated here, and a refusal is a *value* the renderer can assert on. */
+const handlePing = (payload: unknown): PingResponse => {
+  const parsed = pingRequestSchema.safeParse(payload);
+  if (!parsed.success) {
+    return { ok: false, code: 'invalid-payload', message: describeIssues(parsed.error.issues) };
+  }
+  return {
+    ok: true,
+    echo: parsed.data.message,
+    handledAt: new Date().toISOString(),
+    origin: `main:${process.pid}`,
+  };
+};
+
+/** Applied to every `webContents` in the process, including any future one. */
+const guardContents = (contents: WebContents): void => {
+  contents.on('will-navigate', (event, url) => {
+    if (!isTrustedUrl(url)) {
+      event.preventDefault();
+      console.log(`[auralide] blocked navigation to an untrusted URL: ${url}`);
+    }
+  });
+
+  contents.on('will-attach-webview', (event) => {
+    event.preventDefault();
+    console.log('[auralide] blocked a webview attachment');
+  });
+
+  contents.setWindowOpenHandler(({ url }) => {
+    // External links belong to the user's browser, never to the application shell.
+    if (url.startsWith('https://')) {
+      void shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+};
+
+app.on('web-contents-created', (_event, contents) => {
+  guardContents(contents);
+});
+
+/**
+ * Creates the single application window. The `webPreferences` below are the security posture
+ * described in ADR-0002 §2 and docs/architecture/security.md §3 — do not relax them to make
+ * development work; development is meant to run under the same posture.
+ */
+const createWindow = (): BrowserWindow => {
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
     show: false,
     backgroundColor: '#101014',
     webPreferences: {
+      preload: preloadPath,
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
       webSecurity: true,
+      webviewTag: false,
+      spellcheck: false,
+      allowRunningInsecureContent: false,
     },
   });
 
@@ -29,33 +152,60 @@ function createWindow(): BrowserWindow {
     window.show();
   });
 
-  // Links to the outside world open in the user's browser, never inside the app shell.
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
-    return { action: 'deny' };
-  });
-
-  if (devServerUrl !== undefined && devServerUrl !== '') {
-    void window.loadURL(devServerUrl);
-  } else {
-    void window.loadFile(join(currentDirectory, '..', 'renderer', 'index.html'));
-  }
-
-  return window;
-}
-
-void app.whenReady().then(() => {
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+  window.on('closed', () => {
+    if (mainWindow === window) {
+      mainWindow = null;
     }
   });
-});
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+  const load =
+    loadPath === 'development' ? window.loadURL(devServerUrl) : window.loadFile(rendererEntry);
+  void load.catch((error: unknown) => {
+    console.error(`[auralide] failed to load the renderer: ${String(error)}`);
+  });
+
+  return window;
+};
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow !== null) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+  });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
+
+  void app.whenReady().then(() => {
+    // No capability is granted by default, including to the application's own page.
+    session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => {
+      callback(false);
+    });
+    session.defaultSession.setPermissionCheckHandler(() => false);
+
+    handle(IPC.runtimeInfo, () => runtimeInfo());
+    handle(IPC.ping, (payload) => handlePing(payload));
+
+    // One line of machine-readable startup evidence, also asserting which path was taken.
+    process.stdout.write(
+      `[auralide] startup loadPath=${loadPath} electron=${process.versions.electron} chrome=${process.versions.chrome} node=${process.versions.node} preload=${preloadPath} renderer=${loadPath === 'development' ? devServerUrl : rendererEntry}\n`,
+    );
+
+    mainWindow = createWindow();
+
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        mainWindow = createWindow();
+      }
+    });
+  });
+}

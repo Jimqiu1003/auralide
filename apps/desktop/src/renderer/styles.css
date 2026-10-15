@@ -12,11 +12,12 @@ body {
 .shell {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
   align-items: flex-start;
   justify-content: center;
-  height: 100vh;
-  padding: 0 3rem;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 3rem;
 }
 
 .shell h1 {
@@ -25,7 +26,53 @@ body {
   letter-spacing: 0.04em;
 }
 
-.layers {
+.subtitle {
+  margin: 0;
   color: #a1a1aa;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 1.25rem;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.facts dt {
+  color: #a1a1aa;
+}
+
+.facts dd {
+  margin: 0;
+  font-family: 'Cascadia Mono', Consolas, monospace;
+}
+
+.probes {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1.25rem;
+  align-items: center;
+  padding-top: 1rem;
+  border-top: 1px solid #2a2a33;
+}
+
+.probes button {
+  padding: 0.35rem 0.9rem;
+  font: inherit;
+  color: #f4f4f5;
+  cursor: pointer;
+  background: #26262e;
+  border: 1px solid #3a3a45;
+  border-radius: 6px;
+}
+
+.probes button:hover {
+  background: #32323d;
+}
+
+.probes output {
+  font-family: 'Cascadia Mono', Consolas, monospace;
+  color: #86efac;
 }
