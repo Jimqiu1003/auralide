@@ -21,6 +21,7 @@ const appRoot = process.cwd();
 const artifacts = join(appRoot, 'test-artifacts');
 const devServerUrl = 'http://localhost:5173';
 const checks = [];
+const allChecks = [];
 const failures = [];
 
 delete process.env.ELECTRON_RUN_AS_NODE;
@@ -40,12 +41,23 @@ const checkTruthy = (name, actual) => {
   process.stdout.write(`${pass ? 'ok  ' : 'FAIL'} ${name} = ${JSON.stringify(actual)}\n`);
 };
 
-async function waitForDevServer(url, timeoutMs = 60_000) {
+async function waitForDevServer(url, child, timeoutMs = 60_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    if (child.startupError !== undefined) throw child.startupError;
+    if (child.exitCode !== null || child.signalCode !== null) {
+      throw new Error(`vite exited before readiness (${child.exitCode ?? child.signalCode})`);
+    }
     try {
-      const response = await fetch(url);
-      if (response.ok) return await response.text();
+      if (!child.ready) {
+        await delay(100);
+        continue;
+      }
+      const response = await fetch(url, { signal: globalThis.AbortSignal.timeout(2_000) });
+      if (response.ok) {
+        const text = await response.text();
+        if (text.includes('<title>Auralide</title>')) return text;
+      }
     } catch {
       /* not up yet */
     }
@@ -61,8 +73,17 @@ function startDevServer() {
   const child = spawn(process.execPath, [entry, '--port', '5173', '--strictPort'], {
     cwd: appRoot,
   });
-  child.stdout.on('data', (chunk) => process.stdout.write(`[vite] ${chunk}`));
+  let output = '';
+  child.ready = false;
+  child.stdout.on('data', (chunk) => {
+    output += String(chunk);
+    child.ready = output.includes(devServerUrl);
+    process.stdout.write(`[vite] ${chunk}`);
+  });
   child.stderr.on('data', (chunk) => process.stderr.write(`[vite] ${chunk}`));
+  child.on('error', (error) => {
+    child.startupError = error;
+  });
   return child;
 }
 
@@ -75,20 +96,126 @@ function stopDevServer(child) {
   }
 }
 
+async function securityProbes(app, page) {
+  const probePreload = join(artifacts, 'security-probe.cjs');
+  await writeFile(
+    probePreload,
+    "const { contextBridge, ipcRenderer } = require('electron'); contextBridge.exposeInMainWorld('securityProbe', { invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args) });\n",
+  );
+  const probes = await app.evaluate(async ({ BrowserWindow, ipcMain }, preload) => {
+    const main = BrowserWindow.getAllWindows()[0];
+    const prefs = main.webContents.getLastWebPreferences();
+    const auxiliary = new BrowserWindow({
+      show: false,
+      webPreferences: { preload, sandbox: true, contextIsolation: true, nodeIntegration: false },
+    });
+    try {
+      await auxiliary.loadURL(main.webContents.getURL());
+      const invoke = async (channel) =>
+        auxiliary.webContents.executeJavaScript(
+          `window.securityProbe.invoke(${JSON.stringify(channel)}).then(() => 'unexpected-success', error => error.message)`,
+        );
+      const unknownChannel = await invoke('auralide:unknown');
+      const wrongWindow = await invoke('auralide:runtime-info');
+
+      // shortcut: Electron's private handler map tests frame/arity gates, replace if Electron changes it.
+      const handlers = ipcMain._invokeHandlers;
+      if (!(handlers instanceof Map)) throw new Error('Electron IPC handler test harness changed');
+      const runtimeHandler = handlers.get('auralide:runtime-info');
+      const event = { sender: main.webContents, senderFrame: main.webContents.mainFrame };
+      const refused = async (candidate, ...args) => {
+        try {
+          await runtimeHandler(candidate, ...args);
+          return false;
+        } catch {
+          return true;
+        }
+      };
+      const extraRuntimeArgument = await refused(event, { unexpected: true });
+      const wrongFrame = await refused({
+        ...event,
+        senderFrame: { url: main.webContents.getURL() },
+      });
+      const redirect = { url: 'https://example.invalid/', isMainFrame: true, prevented: false };
+      redirect.preventDefault = () => {
+        redirect.prevented = true;
+      };
+      main.webContents.emit('will-redirect', redirect);
+      return {
+        unknownChannel,
+        wrongWindow,
+        wrongFrame,
+        extraRuntimeArgument,
+        redirectBlocked: redirect.prevented,
+        contextIsolation: prefs.contextIsolation,
+        nodeIntegration: prefs.nodeIntegration,
+        sandbox: prefs.sandbox,
+        webSecurity: prefs.webSecurity,
+      };
+    } finally {
+      auxiliary.destroy();
+    }
+  }, probePreload);
+  checkTruthy('unknown IPC channel rejected', /No handler registered/.test(probes.unknownChannel));
+  checkTruthy('IPC from another window rejected', /refused/.test(probes.wrongWindow));
+  checkTruthy('IPC from a non-main frame rejected', probes.wrongFrame);
+  checkTruthy('runtime-info extra argument rejected', probes.extraRuntimeArgument);
+  checkTruthy('external redirect rejected', probes.redirectBlocked);
+  check('contextIsolation', probes.contextIsolation, true);
+  check('nodeIntegration', probes.nodeIntegration, false);
+  check('sandbox', probes.sandbox, true);
+  check('webSecurity', probes.webSecurity, true);
+
+  const originalUrl = page.url();
+  const navigationBlocked = app.evaluate(
+    ({ BrowserWindow }) =>
+      new Promise((resolve) => {
+        const contents = BrowserWindow.getAllWindows()[0].webContents;
+        const timeout = setTimeout(() => resolve(false), 5_000);
+        contents.once('will-frame-navigate', (event) => {
+          clearTimeout(timeout);
+          resolve(event.defaultPrevented);
+        });
+      }),
+  );
+  await page.evaluate(() => {
+    window.location.href = 'https://example.invalid/';
+  });
+  checkTruthy('external navigation rejected', await navigationBlocked);
+  check('application entry retained', page.url(), originalUrl);
+  check(
+    'window.open denied',
+    await page.evaluate(() => window.open('http://127.0.0.1:1/') === null),
+    true,
+  );
+  check(
+    'notification permission denied',
+    await page.evaluate(() => window.Notification.requestPermission()),
+    'denied',
+  );
+}
+
 async function runMode(mode) {
+  checks.length = 0;
+  const failureStart = failures.length;
   process.stdout.write(`\n=== smoke: ${mode} ===\n`);
   const consoleMessages = [];
   const startupLines = [];
   let devServer;
   let app;
+  let electronVersion = 'unknown';
+  let servedHtml = '';
+  let modeError = '';
   const started = Date.now();
 
   try {
     if (mode === 'dev') {
       devServer = startDevServer();
+      servedHtml = await waitForDevServer(devServerUrl, devServer);
     }
     const env = { ...process.env, AURALIDE_DEV_SERVER_URL: mode === 'dev' ? devServerUrl : '' };
     app = await electron.launch({ args: ['.'], cwd: appRoot, env, timeout: 60_000 });
+    electronVersion = await app.evaluate(() => process.versions.electron);
     app.process().stdout?.on('data', (chunk) => startupLines.push(String(chunk).trim()));
     const page = await app.firstWindow({ timeout: 60_000 });
     page.on('console', (message) => consoleMessages.push(`${message.type()}: ${message.text()}`));
@@ -125,7 +252,7 @@ async function runMode(mode) {
     check(
       'bridge-version',
       await page.locator('[data-testid="bridge-version"]').textContent(),
-      '1.0.0',
+      '1.1.0',
     );
 
     // Renderer boundary: nothing but the frozen bridge is reachable.
@@ -143,7 +270,11 @@ async function runMode(mode) {
     check('window.process', exposed.process, 'undefined');
     check('window.module', exposed.module, 'undefined');
     check('window.ipcRenderer', exposed.ipcRenderer, 'undefined');
-    check('bridge keys', exposed.keys, 'bridgeVersion,getRuntimeInfo,ping');
+    check(
+      'bridge keys',
+      exposed.keys,
+      'applyCommand,bridgeVersion,getDocument,getRuntimeInfo,ping',
+    );
     checkTruthy('bridge is frozen', exposed.frozen);
 
     // Allow-listed round trip.
@@ -179,6 +310,47 @@ async function runMode(mode) {
     check('unexpected field refused', extraField?.ok, false);
     check('unexpected field code', extraField?.code, 'invalid-payload');
 
+    await securityProbes(app, page);
+
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '0',
+    );
+    check(
+      'initial core text',
+      await page.getByTestId('slide-text').textContent(),
+      'Your ideas, structured.',
+    );
+    const updatedText = '<script>alert(1)</script> Core edit';
+    await page.getByTestId('document-text-input').fill(updatedText);
+    await page.getByTestId('document-apply').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '1',
+    );
+    check(
+      'core command updates preview',
+      await page.getByTestId('slide-text').textContent(),
+      updatedText,
+    );
+    check('preview does not execute markup', await page.locator('svg script').count(), 0);
+    const stale = await page.evaluate(async () => {
+      const before = await window.auralide.getDocument();
+      const slide = before.slides[0];
+      const element = slide.elements[0];
+      const response = await window.auralide.applyCommand({
+        operation: 'element.updateText',
+        target: { kind: 'element', slideId: slide.id, elementId: element.id },
+        payload: { text: 'stale overwrite' },
+        expectedRevision: 0,
+        origin: { kind: 'human', id: 'smoke' },
+      });
+      return {
+        response,
+        unchanged: JSON.stringify(before) === JSON.stringify(await window.auralide.getDocument()),
+      };
+    });
+    check('stale desktop command refused', stale.response.error?.code, 'stale-revision');
+    checkTruthy('stale desktop command preserves document', stale.unchanged);
+
     const cspViolations = consoleMessages.filter((message) =>
       /Content Security Policy|Refused to (load|execute|connect)/i.test(message),
     );
@@ -201,30 +373,35 @@ async function runMode(mode) {
       sourceHtml.includes('<!--csp-->') && !sourceHtml.includes('unsafe-inline'),
     );
     if (mode === 'dev') {
-      const servedHtml = await waitForDevServer(devServerUrl, 15_000);
       checkTruthy(
         'development csp matches the dev server',
         servedHtml.includes("script-src 'self' 'unsafe-inline'") &&
           servedHtml.includes('ws://localhost:5173'),
       );
     }
-
+  } catch (error) {
+    modeError = error instanceof Error ? error.message : String(error);
+    throw error;
+  } finally {
+    allChecks.push(...checks.map((entry) => ({ mode, ...entry })));
     await writeFile(
       join(artifacts, `${mode}.json`),
       `${JSON.stringify(
         {
           mode,
-          electronVersion: app.electronVersion?.() ?? 'unknown',
+          electronVersion,
           durationMs: Date.now() - started,
           startupLines,
           consoleMessages,
           checks,
+          failures: failures.slice(failureStart),
+          error: modeError,
+          passed: modeError === '' && failures.length === failureStart,
         },
         null,
         2,
       )}\n`,
     );
-  } finally {
     if (app !== undefined) await app.close().catch(() => undefined);
     stopDevServer(devServer);
   }
@@ -245,7 +422,7 @@ for (const mode of modes) {
 }
 
 process.stdout.write(
-  `\nsmoke summary: ${checks.filter((c) => c.pass).length}/${checks.length} checks passed, artifacts in ${artifacts}\n`,
+  `\nsmoke summary: ${allChecks.filter((c) => c.pass).length}/${allChecks.length} checks passed, artifacts in ${artifacts}\n`,
 );
 if (failures.length > 0) {
   process.stdout.write(`\n${failures.length} failure(s):\n- ${failures.join('\n- ')}\n`);

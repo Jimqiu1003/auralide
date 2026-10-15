@@ -1,11 +1,14 @@
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron';
 import type { IpcMainInvokeEvent, WebContents } from 'electron';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { z } from 'zod';
 
 import type { LoadPath, PingResponse, RuntimeInfo } from '../shared/api.js';
 import { IPC, IPC_ALLOW_LIST } from '../shared/channels.js';
 import { describeIssues, pingRequestSchema } from '../shared/schemas.js';
+import { dispatchDocumentCommand, getDocument } from './document-session.js';
+import { isTrustedRendererUrl, validateDevServerUrl } from './security.js';
 
 /**
  * Main process: the trusted side of the runtime.
@@ -20,22 +23,14 @@ const preloadPath = join(currentDirectory, 'preload.cjs');
 const rendererEntry = join(currentDirectory, '..', 'renderer', 'index.html');
 
 /** Set by `scripts/launch.mjs --dev`; its presence is what selects the development load path. */
-const devServerUrl = (process.env.AURALIDE_DEV_SERVER_URL ?? '').trim();
+const devServerUrl = validateDevServerUrl(
+  (process.env.AURALIDE_DEV_SERVER_URL ?? '').trim(),
+  app.isPackaged,
+);
 const loadPath: LoadPath = devServerUrl === '' ? 'production' : 'development';
 
-/** The only URL space the application may navigate inside. */
-const trustedPrefix = ((): string => {
-  if (devServerUrl === '') {
-    return 'file://';
-  }
-  try {
-    return new URL(devServerUrl).origin;
-  } catch {
-    throw new Error(`AURALIDE_DEV_SERVER_URL is not a valid URL: ${devServerUrl}`);
-  }
-})();
-
-const isTrustedUrl = (url: string): boolean => url.startsWith(trustedPrefix);
+const trustedRendererUrl = devServerUrl || pathToFileURL(rendererEntry).href;
+const isTrustedUrl = (url: string): boolean => isTrustedRendererUrl(url, trustedRendererUrl);
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -57,7 +52,10 @@ const runtimeInfo = (): RuntimeInfo => ({
 const assertTrustedSender = (event: IpcMainInvokeEvent, channel: string): void => {
   const frameUrl = event.senderFrame?.url ?? '';
   const expectedSender = mainWindow?.webContents;
-  const fromApplicationWindow = expectedSender !== undefined && event.sender === expectedSender;
+  const fromApplicationWindow =
+    expectedSender !== undefined &&
+    event.sender === expectedSender &&
+    event.senderFrame === expectedSender.mainFrame;
   if (!fromApplicationWindow || !isTrustedUrl(frameUrl)) {
     throw new Error(
       `refused ${channel}: message did not come from the application window (frame=${frameUrl === '' ? 'unknown' : frameUrl})`,
@@ -65,22 +63,28 @@ const assertTrustedSender = (event: IpcMainInvokeEvent, channel: string): void =
   }
 };
 
-type IpcHandler = (payload: unknown) => unknown;
-
 /**
  * Gate 0 of the IPC boundary: only allow-listed channels get a handler. The parameter is typed
  * `string` on purpose — the check must stay a real runtime check, not something the compiler
  * already proved.
  */
-const handle = (channel: string, handler: IpcHandler): void => {
+const handle = <Args extends unknown[]>(
+  channel: string,
+  schema: z.ZodType<Args>,
+  handler: (args: Args) => unknown,
+): void => {
   if (!(IPC_ALLOW_LIST as readonly string[]).includes(channel)) {
     throw new Error(
       `refusing to register a handler for a non-allow-listed IPC channel: ${channel}`,
     );
   }
-  ipcMain.handle(channel, (event, payload: unknown) => {
+  ipcMain.handle(channel, (event, ...args: unknown[]) => {
     assertTrustedSender(event, channel);
-    return handler(payload);
+    const parsed = schema.safeParse(args);
+    if (!parsed.success) {
+      throw new Error(`invalid-payload: ${describeIssues(parsed.error.issues)}`);
+    }
+    return handler(parsed.data);
   });
 };
 
@@ -100,10 +104,16 @@ const handlePing = (payload: unknown): PingResponse => {
 
 /** Applied to every `webContents` in the process, including any future one. */
 const guardContents = (contents: WebContents): void => {
-  contents.on('will-navigate', (event, url) => {
-    if (!isTrustedUrl(url)) {
+  contents.on('will-frame-navigate', (event) => {
+    if (!event.isMainFrame || !isTrustedUrl(event.url)) {
       event.preventDefault();
-      console.log(`[auralide] blocked navigation to an untrusted URL: ${url}`);
+      console.log('[auralide] blocked navigation outside the application entry');
+    }
+  });
+  contents.on('will-redirect', (event) => {
+    if (!event.isMainFrame || !isTrustedUrl(event.url)) {
+      event.preventDefault();
+      console.log('[auralide] blocked redirect outside the application entry');
     }
   });
 
@@ -115,7 +125,9 @@ const guardContents = (contents: WebContents): void => {
   contents.setWindowOpenHandler(({ url }) => {
     // External links belong to the user's browser, never to the application shell.
     if (url.startsWith('https://')) {
-      void shell.openExternal(url);
+      void shell.openExternal(url).catch((error: unknown) => {
+        console.error(`[auralide] could not open external link: ${String(error)}`);
+      });
     }
     return { action: 'deny' };
   });
@@ -192,8 +204,12 @@ if (!app.requestSingleInstanceLock()) {
     });
     session.defaultSession.setPermissionCheckHandler(() => false);
 
-    handle(IPC.runtimeInfo, () => runtimeInfo());
-    handle(IPC.ping, (payload) => handlePing(payload));
+    handle(IPC.runtimeInfo, z.tuple([]), () => runtimeInfo());
+    handle(IPC.ping, z.tuple([z.unknown()]), ([payload]) => handlePing(payload));
+    handle(IPC.getDocument, z.tuple([]), () => getDocument());
+    handle(IPC.applyCommand, z.tuple([z.unknown()]), ([command]) =>
+      dispatchDocumentCommand(command),
+    );
 
     // One line of machine-readable startup evidence, also asserting which path was taken.
     process.stdout.write(

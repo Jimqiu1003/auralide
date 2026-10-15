@@ -13,7 +13,8 @@
     "dev": "vite",
     "start": "node scripts/launch.mjs",
     "start:dev": "node scripts/launch.mjs --dev",
-    "smoke": "node test/smoke.electron.mjs all"
+    "smoke": "node test/smoke.electron.mjs all",
+    "test": "vitest run --root ."
   },
   "dependencies": {
     "@auralide/core": "workspace:*",
