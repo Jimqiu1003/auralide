@@ -421,11 +421,11 @@ One envelope, three transports. In P1 only the in-process call exists; the CLI a
 **proposed**, not approved surfaces, and the parameters shown must not be treated as a published CLI
 contract.
 
-| Transport  | Status                                                      | How the envelope appears                                                                                                                                                             |
-| ---------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| In-process | P1.2 — the only implemented path                            | a typed call: `dispatch(document, command)` returning `Result<CommandSuccess, CommandError>` (`dispatch` is a placeholder name; P1.2 owns the export). Serialization is skipped.     |
-| CLI        | P1.3 proves a minimal invocation; full surface not designed | one invocation = one envelope; the command JSON is passed as an argument, the result object is printed verbatim by a machine-readable mode. Proposed, not an approved parameter set. |
-| MCP server | not implemented (P1+ per `ADR-0002` follow-ups)             | one tool whose input schema is the envelope and whose output is the `CommandResult` as JSON. Proposed: a single tool named `apply_command` rather than one tool per operation.       |
+| Transport  | Status                                                       | How the envelope appears                                                                                                                                                             |
+| ---------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| In-process | P1.2 (in progress on `feat/p1-core-*`) — the in-process path | a typed call: `dispatch(document, command)` returning `Result<CommandSuccess, CommandError>` (`dispatch` is a placeholder name; P1.2 owns the export). Serialization is skipped.     |
+| CLI        | P1.3 proves a minimal invocation; full surface not designed  | one invocation = one envelope; the command JSON is passed as an argument, the result object is printed verbatim by a machine-readable mode. Proposed, not an approved parameter set. |
+| MCP server | not implemented (P1+ per `ADR-0002` follow-ups)              | one tool whose input schema is the envelope and whose output is the `CommandResult` as JSON. Proposed: a single tool named `apply_command` rather than one tool per operation.       |
 
 Rules every transport must honour:
 
