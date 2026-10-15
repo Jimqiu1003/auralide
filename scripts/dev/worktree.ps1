@@ -75,13 +75,37 @@ function Invoke-Git {
         [Parameter(Mandatory)][string[]]$Arguments
     )
 
-    $output = & git -C $Repository @Arguments 2>&1
+    # `core.longpaths` is enabled per invocation: a linked worktree that ran `pnpm install` contains
+    # paths beyond the Windows MAX_PATH limit, and without this flag `git worktree remove` fails
+    # with "Filename too long" *after* deleting part of the directory.
+    $output = & git -c core.longpaths=true -C $Repository @Arguments 2>&1
     if ($LASTEXITCODE -ne 0) {
         throw "git $($Arguments -join ' ') failed in '$Repository':`n$($output -join "`n")"
     }
     # The leading comma stops PowerShell from unrolling a single-element array, so callers can
     # rely on the result always being an array of lines.
     return , @($output)
+}
+
+function Remove-DirectoryTree {
+    param([Parameter(Mandatory)][string]$Path)
+
+    # Last-resort deletion for a path tree that git could not remove. The `\\?\` prefix lifts the
+    # MAX_PATH limit even when `core.longpaths` is not honoured; callers must already have verified
+    # that the tree is clean and inside the worktree root.
+    if ($IsWindows) {
+        $absolute = [System.IO.Path]::GetFullPath($Path)
+        & cmd /c rmdir /s /q ("\\?\" + $absolute) 2>&1 | Out-Null
+        if ($LASTEXITCODE -ne 0 -or (Test-Path -LiteralPath $Path)) {
+            throw ("Failed to delete '$Path' directly (rmdir exit $LASTEXITCODE). " +
+                'A process is most likely holding files open inside it - a shell whose current ' +
+                'directory is that worktree, a running dev server or a build. Close it, change ' +
+                'directory out of the worktree, and retry.')
+        }
+    }
+    else {
+        Remove-Item -LiteralPath $Path -Recurse -Force
+    }
 }
 
 function Get-WorktreeEntries {
@@ -295,7 +319,36 @@ try {
         Write-Output "Removing worktree '$($entry.Path)' (branch $($entry.Branch))"
         if ($DryRun) { Write-Output '(dry run: nothing changed)'; break }
 
-        Invoke-Git -Repository $mainWorktree -Arguments @('worktree', 'remove', $entry.Path) | ForEach-Object { Write-Output "  $_" }
+        # On Windows a process whose current directory is inside the tree prevents its deletion, so
+        # step out of it before touching the filesystem. A parent shell that is still inside the
+        # worktree cannot be helped from here - the failure message says so explicitly.
+        $resolvedTarget = [System.IO.Path]::GetFullPath($entry.Path).TrimEnd('\', '/')
+        $resolvedCurrent = [System.IO.Path]::GetFullPath((Get-Location).Path).TrimEnd('\', '/')
+        if ($resolvedCurrent -eq $resolvedTarget -or $resolvedCurrent.StartsWith("$resolvedTarget\", [System.StringComparison]::OrdinalIgnoreCase)) {
+            Write-Output "  current directory is inside the worktree; moving to '$mainWorktree' first"
+            Set-Location -LiteralPath $mainWorktree
+        }
+
+        try {
+            Invoke-Git -Repository $mainWorktree -Arguments @('worktree', 'remove', $entry.Path) | ForEach-Object { Write-Output "  $_" }
+        }
+        catch {
+            # git can refuse the removal outright (locks, permissions); the verification below then
+            # finishes the job, and `prune` drops the administrative record.
+            Write-Output "  git reported a failure: $($_.Exception.Message)"
+        }
+
+        # `git worktree remove` is not trustworthy on Windows for trees that contain node_modules:
+        # it can exit 0 while leaving deep paths behind (measured: 643 leftover files in a tree whose
+        # longest path was 266 characters). Never report success without checking the filesystem.
+        if (Test-Path -LiteralPath $entry.Path) {
+            Write-Output "  git left files behind at '$($entry.Path)'; completing the deletion directly"
+            Remove-DirectoryTree -Path $entry.Path
+            Invoke-Git -Repository $mainWorktree -Arguments @('worktree', 'prune') | ForEach-Object { Write-Output "  $_" }
+            if (Test-Path -LiteralPath $entry.Path) {
+                throw "Failed to remove '$($entry.Path)' completely; inspect it manually."
+            }
+        }
 
         if ($unmerged -eq 0) {
             Invoke-Git -Repository $mainWorktree -Arguments @('branch', '-d', $entry.Branch) | ForEach-Object { Write-Output "  $_" }
