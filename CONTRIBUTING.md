@@ -57,7 +57,11 @@ pnpm verify     # format:check → lint → typecheck → test → build
 ```
 
 The same checks run in CI (`.github/workflows/ci.yml`). A PR is only ready when CI is green and
-the change has a verification summary (commands run + observed result).
+the change has a verification summary (commands run + observed result). Reproducible commands,
+observed output and the known gaps are recorded in
+[`docs/development/verification-checklist.md`](docs/development/verification-checklist.md) — use
+`npx turbo run lint typecheck test build --force --continue` when you need a real failure list,
+because the shared Turborepo cache can replay `FULL TURBO` results instead of running the checks.
 
 ## Task protocol
 
