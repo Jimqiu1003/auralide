@@ -55,6 +55,14 @@ const readBytes = async (path: string): Promise<Buffer> => {
     }
     if (length > MAX_BYTES)
       throw new DocumentFileError('too-large', 'P2A documents must be at most 20 MiB.');
+    const after = await handle.stat();
+    if (
+      length > stat.size ||
+      after.size !== stat.size ||
+      after.mtimeMs !== stat.mtimeMs ||
+      after.ctimeMs !== stat.ctimeMs
+    )
+      throw new DocumentFileError('file-changed', 'The selected file changed while reading.');
     return bytes.subarray(0, length);
   } finally {
     await handle.close();
@@ -124,14 +132,6 @@ export const writeDocumentFile = async (
         'file-changed',
         'The file changed during save. It was not replaced.',
       );
-    const after = await handle.stat();
-    if (
-      length > stat.size ||
-      after.size !== stat.size ||
-      after.mtimeMs !== stat.mtimeMs ||
-      after.ctimeMs !== stat.ctimeMs
-    )
-      throw new DocumentFileError('file-changed', 'The selected file changed while reading.');
     if (expectedStamp === null) {
       // Creating a new file must not overwrite a target that appeared after the last check.
       try {

@@ -89,7 +89,7 @@ verified by this integration test.
 
 Initial direct desktop tests/typecheck in the fresh worktree failed because dependency `dist`
 outputs were not built. `pnpm build` supplied them; the checks then passed. This setup failure is
-recorded, not counted as a successful initial run. Final exact-head CI is tracked below.
+recorded, not counted as a successful initial run. A later read-change guard was accidentally placed in the write routine in checkpoint 08144bb, causing four unit failures; the misplaced guard was moved into readBytes, then full verify, 155 smoke checks and 20 persistence checks passed again. The failed checkpoint remains visible in Git history; it is not the review head. Final exact-head CI is tracked below.
 
 Ignored evidence: `apps/desktop/test-artifacts/{production,dev,persistence}.json`,
 `p2a-reopened.png`, `persistence-*/` saved/backup fixtures, and wireframe screenshots/results.
