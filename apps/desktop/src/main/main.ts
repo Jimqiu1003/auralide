@@ -105,7 +105,7 @@ const handlePing = (payload: unknown): PingResponse => {
   };
 };
 
-/** Applied to every `webContents` in the process, including any future one. */
+/** Trusted shell policy; Aura guests receive their separate deny-by-default policy. */
 const guardContents = (contents: WebContents): void => {
   contents.on('will-frame-navigate', (event) => {
     if (!event.isMainFrame || !isTrustedUrl(event.url)) {
@@ -215,9 +215,15 @@ if (!app.requestSingleInstanceLock()) {
     handle(IPC.applyCommand, z.tuple([z.unknown()]), ([command]) =>
       dispatchDocumentCommand(command),
     );
-    handle(IPC.auraInvoke, z.tuple([z.unknown()]), ([request]) => aura?.invoke(request) ?? {
-      ok: false, error: { code: 'runtime-error', message: 'Aura runtime unavailable.' },
-    });
+    handle(
+      IPC.auraInvoke,
+      z.tuple([z.unknown()]),
+      ([request]) =>
+        aura?.invoke(request) ?? {
+          ok: false,
+          error: { code: 'runtime-error', message: 'Aura runtime unavailable.' },
+        },
+    );
     handle(IPC.auraBounds, z.tuple([z.unknown()]), ([bounds]) => aura?.setBounds(bounds) ?? false);
 
     // One line of machine-readable startup evidence, also asserting which path was taken.

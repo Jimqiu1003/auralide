@@ -24,7 +24,8 @@ const api: AuralideApi = Object.freeze({
   getDocument: (): Promise<Presentation> => ipcRenderer.invoke(IPC.getDocument),
   applyCommand: (command: CommandEnvelope): Promise<Result<Presentation, CommandError>> =>
     ipcRenderer.invoke(IPC.applyCommand, command),
-  auraInvoke: (request: AuraRequest): Promise<AuraResult> => ipcRenderer.invoke(IPC.auraInvoke, request),
+  auraInvoke: (request: AuraRequest): Promise<AuraResult> =>
+    ipcRenderer.invoke(IPC.auraInvoke, request),
   auraSetBounds: (bounds: Parameters<AuralideApi['auraSetBounds']>[0]): Promise<boolean> =>
     ipcRenderer.invoke(IPC.auraBounds, bounds),
 });

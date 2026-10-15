@@ -9,4 +9,14 @@ import type { Layer } from '@auralide/core';
 export const layer: Layer = 'agent';
 
 export { auraRequestSchema } from './browser-contract.js';
-export type { AuraRequest, AuraTab, AuraElement, AuraDiagnostics, AuraScreenshot, AuraData, AuraErrorCode, AuraResult, AuraAuditEntry } from './browser-contract.js';
+export type {
+  AuraRequest,
+  AuraTab,
+  AuraElement,
+  AuraDiagnostics,
+  AuraScreenshot,
+  AuraData,
+  AuraErrorCode,
+  AuraResult,
+  AuraAuditEntry,
+} from './browser-contract.js';

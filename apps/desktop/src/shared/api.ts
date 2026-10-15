@@ -49,7 +49,13 @@ export type AuralideApi = {
   readonly getDocument: () => Promise<Presentation>;
   readonly applyCommand: (command: CommandEnvelope) => Promise<Result<Presentation, CommandError>>;
   readonly auraInvoke: (request: AuraRequest) => Promise<AuraResult>;
-  readonly auraSetBounds: (bounds: { x: number; y: number; width: number; height: number; visible: boolean }) => Promise<boolean>;
+  readonly auraSetBounds: (bounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    visible: boolean;
+  }) => Promise<boolean>;
 };
 
 declare global {
