@@ -71,7 +71,7 @@ Local environment: Windows x64; Node 24.21.0, Electron 44.7.2, Vitest 5.0.4, pnp
 | Desktop Vitest                                      | PASS, 16 tests; 5 new storage/application tests plus existing 11                                                    |
 | `node --test scripts/qa/platform-evidence.test.mjs` | PASS, 1 validator self-check                                                                                        |
 | `pnpm --filter @auralide/desktop smoke`             | Actual production/development windows, 155/155 PASS, existing security/CSP/Core/Aura probes retained                |
-| `node apps/desktop/test/persistence.electron.mjs`   | Actual windows/process restart + real disk adapter, 20/20 PASS                                                      |
+| `node apps/desktop/test/persistence.electron.mjs`   | Actual windows/process restart + real disk adapter, 22/22 PASS                                                      |
 | `node apps/desktop/test/wireframes.electron.mjs`    | PASS, 12 views, themes, shortcut hints, keyboard focus, narrow viewport; A selected                                 |
 | `git diff --check`                                  | PASS                                                                                                                |
 
@@ -92,7 +92,7 @@ outputs were not built. `pnpm build` supplied them; the checks then passed. This
 recorded, not counted as a successful initial run. A later read-change guard was accidentally placed in the write routine in checkpoint 08144bb, causing four unit failures; the misplaced guard was moved into readBytes, then full verify, 155 smoke checks and 20 persistence checks passed again. The failed checkpoint remains visible in Git history; it is not the review head. Final exact-head CI is tracked below.
 
 Ignored evidence: `apps/desktop/test-artifacts/{production,dev,persistence}.json`,
-`p2a-reopened.png`, `persistence-*/` saved/backup fixtures, and wireframe screenshots/results.
+`p2a-reopened.png`, `p2a-html-preview.png`, `persistence-*/` saved/backup fixtures, and wireframe screenshots/results.
 
 ## 6. Risks
 
@@ -122,7 +122,7 @@ and undoable. Scope and permission ADR review precede exposing an external trans
 
 ## 8. Git Delivery / native gate
 
-Branch: `feat/p2a-durable-documents`. PR and implementation SHA are added after publication; exact
+Branch: `feat/p2a-durable-documents`; [PR #23](https://github.com/Jimqiu1003/auralide/pull/23). Implementation c57c4a8b7498e15809cf758b0bcbe81b1087e5c0 passed [native CI 38752711796](https://github.com/Jimqiu1003/auralide/actions/runs/38752711796): Windows x64, macOS ARM64 and aggregate success. Downloaded macOS persistence.json reports 20/20 workflow checks; platform.json records Node 24.20.0 / Electron 44.7.2 ARM64, uname arm64, hardware=1, translated=0. Two subsequent PNG assertions extend the same test to 22 local checks; their remote result is tracked by PR checks. The latest exact
 head CI must pass Windows x64 and native macOS ARM64 before recommending integration. ADR-0005 and
 ADR-0006, snapshot/history policy and stacked PR merge order require owner review. Nothing merges
 automatically; main and existing worktrees remain preserved.

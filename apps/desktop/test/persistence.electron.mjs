@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -175,6 +176,26 @@ try {
     inspected.value?.text,
     'P2A survives application restart',
   );
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForFunction(async (tab) => {
+    const result = await window.auralide.auraInvoke({
+      tool: 'preview.getDiagnostics',
+      input: { tabId: tab.id, expectedRevision: tab.revision },
+    });
+    return result.ok && result.value.visible;
+  }, tab);
+  const capture = await page.evaluate(
+    (tab) =>
+      window.auralide.auraInvoke({
+        tool: 'preview.screenshot',
+        input: { tabId: tab.id, expectedRevision: tab.revision },
+      }),
+    tab,
+  );
+  check('reopened HTML guest screenshot succeeds', capture.ok, true);
+  const png = Buffer.from(capture.value.base64, 'base64');
+  check('reopened HTML screenshot is PNG', png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+  await writeFile(join(artifacts, 'p2a-html-preview.png'), png);
   await page.screenshot({ path: join(artifacts, 'p2a-reopened.png') });
   await writeFile(corrupt, '{');
   await app.evaluate(({ dialog }, path) => {
