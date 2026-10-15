@@ -5,7 +5,7 @@
 - Delivery branch: `feat/p1-codex-integration`.
 - Implementation commit: `4a8dca856a54acb47443a6ba8bf786adc7b9f595`.
 - Base/main: `049cc2dd6d1aa540620177b60d9a48c68331a32b` (unchanged).
-- PR: pending creation; updated before final delivery.
+- PR: [#14 — P1 recovery and integration](https://github.com/Jimqiu1003/auralide/pull/14) (open; not merged).
 - Result: P1 implementation passes local engineering and real-window gates. Review/merge remains
   outstanding; no merge, branch deletion or worktree removal is authorized or performed.
 
@@ -269,3 +269,14 @@ pnpm-lock.yaml
 tsconfig.base.json
 docs/reports/P1-codex-takeover-report.md
 ```
+
+## 8. Remote delivery verification
+
+- Integration branch pushed and upstream verified; PR #14 targets main and remains open.
+- GitHub Actions `verify` passed for report/implementation HEAD
+  `78fae15e15844675b9df69f79db8347892acf4d3`:
+  [CI run 38722722014](https://github.com/Jimqiu1003/auralide/actions/runs/38722722014).
+- This follow-up commit records only PR/CI metadata. The PR checks page is the live source for
+  subsequent HEAD checks; the implementation commit remains `4a8dca8`.
+- Final historical-worktree status matched the initial snapshot: original heads/branches preserved,
+  only the original P0 audit and Desktop artifacts remain untracked, main stays at `049cc2d`.
