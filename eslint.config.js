@@ -2,6 +2,7 @@
 import js from '@eslint/js';
 import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
+import { builtinModules } from 'node:module';
 
 const CORE_FORBIDDEN = [
   'electron',
@@ -30,6 +31,7 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/dist/**',
       '**/coverage/**',
+      '**/test-artifacts/**',
       '**/.turbo/**',
       '**/*.tsbuildinfo',
     ],
@@ -47,7 +49,7 @@ export default tseslint.config(
         {
           patterns: [
             {
-              group: CORE_FORBIDDEN,
+              group: [...CORE_FORBIDDEN, ...builtinModules, 'node:*'],
               message:
                 '@auralide/core must not depend on UI, Electron or higher layers (ADR-0001).',
             },

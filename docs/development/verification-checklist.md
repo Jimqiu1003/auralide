@@ -1,5 +1,9 @@
 # Repository verification checklist
 
+This checklist records the historical CI-hardening snapshot before P1 integration. Test counts and
+package gaps below describe that snapshot, not the current integration. For current Core/Desktop/CLI
+checks and real-window evidence, see [the takeover report](../reports/P1-codex-takeover-report.md).
+
 Reproducible, repository-level checks and the exact commands that produce them. Every row below was
 executed on the `chore/ci-hardening` worktree (2026-10-15, Windows, Node 24, pnpm 12.11.2) — nothing
 here is a guess.

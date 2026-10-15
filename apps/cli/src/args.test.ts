@@ -12,6 +12,11 @@ function expectOk(argv: readonly string[]): CliOptions {
 }
 
 describe('parseArgs', () => {
+  it('selects the demo and rejects conflicting commands', () => {
+    expect(expectOk(['--demo', '--json'])).toEqual({ command: 'demo', json: true });
+    expect(parseArgs(['--demo', '--version']).ok).toBe(false);
+    expect(parseArgs(['--demo', '--help']).ok).toBe(false);
+  });
   it('defaults to the help command with json output disabled', () => {
     expect(expectOk([])).toEqual({ command: 'help', json: false });
   });

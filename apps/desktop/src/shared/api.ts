@@ -5,6 +5,8 @@
  * code (and therefore without gaining any capability).
  */
 
+import type { CommandEnvelope, CommandError, Presentation, Result } from '@auralide/core';
+
 /** How the window was loaded. The two paths differ only in this. */
 export type LoadPath = 'development' | 'production';
 
@@ -43,6 +45,8 @@ export type AuralideApi = {
   readonly bridgeVersion: string;
   readonly getRuntimeInfo: () => Promise<RuntimeInfo>;
   readonly ping: (request: PingRequest) => Promise<PingResponse>;
+  readonly getDocument: () => Promise<Presentation>;
+  readonly applyCommand: (command: CommandEnvelope) => Promise<Result<Presentation, CommandError>>;
 };
 
 declare global {

@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import type { CommandEnvelope, CommandError, Presentation, Result } from '@auralide/core';
 
 import type { AuralideApi, PingRequest, PingResponse, RuntimeInfo } from '../shared/api.js';
 import { BRIDGE_GLOBAL, BRIDGE_VERSION, IPC } from '../shared/channels.js';
@@ -19,6 +20,9 @@ const api: AuralideApi = Object.freeze({
   bridgeVersion: BRIDGE_VERSION,
   getRuntimeInfo: (): Promise<RuntimeInfo> => ipcRenderer.invoke(IPC.runtimeInfo),
   ping: (request: PingRequest): Promise<PingResponse> => ipcRenderer.invoke(IPC.ping, request),
+  getDocument: (): Promise<Presentation> => ipcRenderer.invoke(IPC.getDocument),
+  applyCommand: (command: CommandEnvelope): Promise<Result<Presentation, CommandError>> =>
+    ipcRenderer.invoke(IPC.applyCommand, command),
 });
 
 contextBridge.exposeInMainWorld(BRIDGE_GLOBAL, api);

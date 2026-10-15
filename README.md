@@ -8,7 +8,8 @@ and AI agents edit through the same validated command layer.
 > records (see [`docs/reports/P0-bootstrap-report.md`](docs/reports/P0-bootstrap-report.md)). P1 adds a
 > really starting Electron shell with a safe preload/IPC boundary, plus the first structured document
 > model and command dispatcher (see [`docs/architecture/p1-plan.md`](docs/architecture/p1-plan.md)).
-> There is still no editor UI.
+> P1 includes a small document workbench: a Core-driven slide preview and validated text edit.
+> Documents remain in memory; storage, full canvas editing and export are later phases.
 
 ## Requirements
 
@@ -29,6 +30,13 @@ pnpm build                # tsc + vite builds for every workspace package
 ```
 
 ## Scripts
+
+Start the built desktop with `pnpm --filter @auralide/desktop start`. For development, run
+`pnpm --filter @auralide/desktop dev` and `pnpm --filter @auralide/desktop start:dev` in separate
+terminals after a build. Run `pnpm --filter @auralide/desktop smoke` to verify both modes in a
+desktop session. `pnpm --filter @auralide/cli start --demo --json` proves headless Core dispatch.
+
+Takeover evidence and preserved historical worktrees: [P1 Codex report](docs/reports/P1-codex-takeover-report.md).
 
 | Command          | What it does                                              |
 | ---------------- | --------------------------------------------------------- |

@@ -14,10 +14,12 @@ body {
   flex-direction: column;
   gap: 1rem;
   align-items: flex-start;
-  justify-content: center;
+  justify-content: flex-start;
   box-sizing: border-box;
   min-height: 100vh;
-  padding: 3rem;
+  padding: 2rem 3rem;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .shell h1 {
@@ -75,4 +77,89 @@ body {
 .probes output {
   font-family: 'Cascadia Mono', Consolas, monospace;
   color: #86efac;
+}
+
+.document {
+  width: 100%;
+}
+.document-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.document-heading h2 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+.eyebrow {
+  color: #acb8db;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+.slide-preview {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  border: 1px solid #3b4054;
+  border-radius: 10px;
+}
+.slide-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.document form {
+  margin-top: 1rem;
+}
+.text-edit {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+.text-edit input {
+  flex: 1;
+  min-width: 0;
+  background: #171b2b;
+  color: #f4f4f5;
+  border: 1px solid #636b82;
+  border-radius: 5px;
+  padding: 0.6rem;
+  font: inherit;
+}
+.text-edit button {
+  background: #d4defb;
+  color: #171b2b;
+  border: 0;
+  border-radius: 5px;
+  padding: 0.6rem 1rem;
+  font: inherit;
+  cursor: pointer;
+}
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid #9ebaff;
+  outline-offset: 3px;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.document [role='status'] {
+  color: #b9c6e4;
+  font-size: 0.85rem;
+}
+@media (max-width: 640px) {
+  .shell {
+    padding: 1.25rem;
+  }
+  .document-heading,
+  .text-edit {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .probes {
+    grid-template-columns: 1fr;
+  }
 }

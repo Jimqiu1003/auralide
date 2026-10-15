@@ -183,6 +183,11 @@ async function securityProbes(app, page) {
   });
   checkTruthy('external navigation rejected', await navigationBlocked);
   check('application entry retained', page.url(), originalUrl);
+  // Playwright keeps a cancelled navigation pending; reload the trusted entry before UI actions.
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="runtime-status"]')?.textContent === 'ready',
+  );
   check(
     'window.open denied',
     await page.evaluate(() => window.open('http://127.0.0.1:1/') === null),
@@ -351,6 +356,60 @@ async function runMode(mode) {
     check('stale desktop command refused', stale.response.error?.code, 'stale-revision');
     checkTruthy('stale desktop command preserves document', stale.unchanged);
 
+    await page.getByTestId('document-text-input').fill('Auralide, powered by Core.');
+    await page.getByTestId('document-apply').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '2',
+    );
+    check(
+      'consecutive edit updates preview',
+      await page.getByTestId('slide-text').textContent(),
+      'Auralide, powered by Core.',
+    );
+    await page.evaluate(async () => {
+      const document = await window.auralide.getDocument();
+      const slide = document.slides[0];
+      await window.auralide.applyCommand({
+        operation: 'element.updateText',
+        target: { kind: 'element', slideId: slide.id, elementId: slide.elements[0].id },
+        payload: { text: 'Changed through the command bridge' },
+        expectedRevision: document.revision,
+        origin: { kind: 'human' },
+      });
+    });
+    await page.getByTestId('document-apply').click();
+    await page.waitForFunction(() =>
+      document
+        .querySelector('[data-testid="document-status"]')
+        ?.textContent?.includes('stale-revision'),
+    );
+    check(
+      'stale UI keeps its snapshot',
+      await page.getByTestId('document-revision').textContent(),
+      '2',
+    );
+    await page.getByTestId('document-reload').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '3',
+    );
+    check(
+      'reload recovers the current text',
+      await page.getByTestId('document-text-input').inputValue(),
+      'Changed through the command bridge',
+    );
+    const finalText = 'Your ideas, structured. Now editable.';
+    await page.getByTestId('document-text-input').fill(finalText);
+    await page.getByTestId('document-apply').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '4',
+    );
+    check(
+      'editing works after reload',
+      await page.getByTestId('slide-text').textContent(),
+      finalText,
+    );
+    check('no Vite error overlay', await page.locator('vite-error-overlay').count(), 0);
+
     const cspViolations = consoleMessages.filter((message) =>
       /Content Security Policy|Refused to (load|execute|connect)/i.test(message),
     );
@@ -358,6 +417,12 @@ async function runMode(mode) {
     check('page errors', pageError, '');
 
     await page.screenshot({ path: join(artifacts, `${mode}.png`) });
+    await page.setViewportSize({ width: 640, height: 900 });
+    checkTruthy(
+      'narrow viewport has no horizontal overflow',
+      await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    );
+    await page.screenshot({ path: join(artifacts, `${mode}-narrow.png`) });
 
     // The two policies must stay separated, whichever mode just ran.
     const builtHtml = await readFile(join(appRoot, 'dist', 'renderer', 'index.html'), 'utf8');

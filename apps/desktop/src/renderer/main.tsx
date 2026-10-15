@@ -3,11 +3,12 @@ import type { JSX } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import type { RuntimeInfo } from '../shared/api.js';
+import { DocumentPreview } from './document-preview.js';
 
 import './styles.css';
 
 /**
- * P1.1 renderer: a diagnostics surface, deliberately not an editor.
+ * P1 renderer: runtime diagnostics and a small Core-driven text workbench.
  *
  * It proves the boundary end to end — the page can be told what the runtime is, and it can be
  * *refused* — and it exposes stable `data-testid` hooks so the smoke run asserts real behaviour
@@ -75,7 +76,9 @@ function Diagnostics(): JSX.Element {
   return (
     <main className="shell" data-testid="app-root">
       <h1 data-testid="app-name">{PRODUCT_NAME}</h1>
-      <p className="subtitle">P1 runtime diagnostics — no editor surface yet.</p>
+      <p className="subtitle">A structured presentation, edited through one command path.</p>
+
+      <DocumentPreview />
 
       <dl className="facts">
         <dt>status</dt>

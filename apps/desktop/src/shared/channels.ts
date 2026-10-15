@@ -11,6 +11,8 @@ export const IPC = {
   runtimeInfo: 'auralide:runtime-info',
   /** Validated echo used to prove the renderer can reach the main process safely. */
   ping: 'auralide:ping',
+  getDocument: 'auralide:get-document',
+  applyCommand: 'auralide:apply-command',
 } as const;
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];
@@ -22,4 +24,4 @@ export const IPC_ALLOW_LIST: readonly IpcChannel[] = Object.freeze(Object.values
 export const BRIDGE_GLOBAL = 'auralide';
 
 /** Version of the bridge surface itself; bumped when the exposed API shape changes. */
-export const BRIDGE_VERSION = '1.0.0';
+export const BRIDGE_VERSION = '1.1.0';

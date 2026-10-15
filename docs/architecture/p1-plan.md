@@ -3,6 +3,12 @@
 Status: **active** (started 2026-10-15). Decisions: [`ADR-0002`](../decisions/ADR-0002-p1-runtime-and-core.md).
 Previous phase: [`P0 report`](../reports/P0-bootstrap-report.md) (frozen history).
 
+Codex takeover (2026-10-15): implementation is integrated on `feat/p1-codex-integration`, with
+`feat/p1-core-document-commands` selected as the Core lineage. The original branches in the table
+below describe the initial assignments; all historical worktrees remain preserved. Current
+verification and PR disposition: [takeover report](../reports/P1-codex-takeover-report.md).
+P1 remains active until the integration PR is reviewed and merged.
+
 ## Goal
 
 Turn the P0 scaffold into something that **actually runs** and can be built on: a real Electron

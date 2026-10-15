@@ -1,7 +1,10 @@
 # @auralide/desktop
 
-Electron shell for Auralide. P1 keeps this a **diagnostics surface**, not an editor: it exists to
-prove the runtime, the renderer boundary and the IPC contract really work (ADR-0002, P1 plan).
+Electron shell for Auralide. P1 includes runtime diagnostics and a small text-only slide workbench
+to prove the Core boundary (ADR-0002, P1 plan). Main owns an in-memory document; the renderer reads
+it and applies `element.updateText` through the validated bridge. Reload document recovers from
+stale revisions or a failed read. Closing the application discards this sample session; there is
+no save, import/export, asset loading or full canvas editor yet.
 
 ## Run
 

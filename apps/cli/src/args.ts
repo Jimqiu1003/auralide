@@ -2,7 +2,7 @@ import { err, ok, type Result } from '@auralide/core';
 import { z } from 'zod';
 
 /** Commands the P0 CLI understands. `help` is the default when no flag is given. */
-export const CLI_COMMANDS = ['help', 'version'] as const;
+export const CLI_COMMANDS = ['help', 'version', 'demo'] as const;
 
 /** Schema for the parsed command line: the CLI is a trust boundary, so argv is validated. */
 export const cliOptionsSchema = z.object({
@@ -19,19 +19,20 @@ export type CliError = {
   readonly message: string;
 };
 
-const KNOWN_FLAGS = new Set(['--help', '-h', '--version', '-v', '--json']);
+const KNOWN_FLAGS = new Set(['--help', '-h', '--version', '-v', '--json', '--demo']);
 
 export const HELP_TEXT = [
-  'auralide — AI-Native HTML Presentation Editor (P0 infrastructure scaffold)',
+  'auralide — AI-Native HTML Presentation Editor (P1 foundation)',
   '',
-  'Usage: auralide [--help] [--version] [--json]',
+  'Usage: auralide [--help | --version | --demo] [--json]',
   '',
   'Options:',
   '  -h, --help     Show this help text (default command)',
   '  -v, --version  Print the CLI version',
   '      --json     Emit machine-readable output where supported',
+  '      --demo     Run an in-memory Core command (no files are written)',
   '',
-  'No document commands exist yet; editing commands arrive with the P1 command layer.',
+  'General document editing and persistence are not exposed by this P1 CLI.',
 ].join('\n');
 
 /**
@@ -56,9 +57,14 @@ export function parseArgs(argv: readonly string[]): Result<CliOptions, CliError>
   }
 
   const wantsVersion = argv.includes('--version') || argv.includes('-v');
+  const wantsDemo = argv.includes('--demo');
+  const wantsHelp = argv.includes('--help') || argv.includes('-h');
+  if (Number(wantsVersion) + Number(wantsDemo) + Number(wantsHelp) > 1) {
+    return err({ code: 'invalid-options', message: 'Choose one of --help, --version or --demo.' });
+  }
 
   const parsed = cliOptionsSchema.safeParse({
-    command: wantsVersion ? 'version' : 'help',
+    command: wantsVersion ? 'version' : wantsDemo ? 'demo' : 'help',
     json: argv.includes('--json'),
   });
 
