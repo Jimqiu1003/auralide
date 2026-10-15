@@ -15,6 +15,7 @@ coverage/
 test-results/
 playwright-report/
 blob-report/
+test-artifacts/
 .vitest/
 
 # Environment and secrets

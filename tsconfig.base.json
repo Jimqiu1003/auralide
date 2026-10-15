@@ -3,6 +3,17 @@
   "compilerOptions": {
     "target": "ES2023",
     "lib": ["ES2023"],
+
+    // No ambient types by default. Without this, TypeScript auto-includes every
+    // package under a reachable node_modules/@types, so a package that must not
+    // see Node APIs can still gain them transitively — measured on this
+    // repository: packages/core loaded @types/node through vitest -> vite ->
+    // @types/node, so Node globals (process, Buffer, ...) typechecked even though
+    // ADR-0001 forbids that dependency and ESLint only restricts imports.
+    // Packages that need ambient types declare them explicitly
+    // (apps/cli: ["node"], apps/desktop: ["node", "vite/client"]).
+    "types": [],
+
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "moduleDetection": "force",

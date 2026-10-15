@@ -132,7 +132,20 @@ commits before the change).
 
 ## Follow-ups
 
+### P1 integration clarification (2026-10-15, Codex Lead)
+
+The takeover selects the `feat/p1-core-document-commands` lineage because it implements the accepted
+envelope, revision/origin checks and image references; the older `feat/p1-core-commands` prototype
+and the unmerged, Proposed ADR-0003 remain preserved in their historical branches. They do not
+override this ADR. Exact payloads/results are reconciled in `command-protocol.md`.
+
+P1 uses validated, frozen document snapshots for history. Undo/redo restore content and identity
+but increment the current revision, preventing stale intent from becoming valid again after undo.
+The desktop main process owns document state and exposes named get/apply capabilities; a small
+text preview/edit workbench proves this boundary without building the full editor. The CLI exposes
+only a deterministic in-memory `--demo` proof of the same dispatcher, not a general editing API.
+
 - P1: implement the runtime, the core model and the dispatcher; verify both with real tests and a
-  launched window; publish `docs/reports/P1-runtime-core-report.md`.
+  launched window; evidence is consolidated in `docs/reports/P1-codex-takeover-report.md`.
 - P1+: storage layer on top of the schema, HTML import through `html-bridge`, preload capability
   review for each new feature, CLI/MCP surface on the documented command protocol.

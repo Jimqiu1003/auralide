@@ -7,16 +7,20 @@
   "type": "module",
   "main": "./dist/main/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && vite build",
+    "build": "tsc -p tsconfig.build.json && vite build --config vite.preload.config.ts && vite build",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint .",
     "dev": "vite",
-    "start": "electron ."
+    "start": "node scripts/launch.mjs",
+    "start:dev": "node scripts/launch.mjs --dev",
+    "smoke": "node test/smoke.electron.mjs all",
+    "test": "vitest run --root ."
   },
   "dependencies": {
     "@auralide/core": "workspace:*",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
