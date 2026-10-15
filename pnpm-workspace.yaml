@@ -12,10 +12,15 @@ packages:
 #
 # Never use `dangerouslyAllowAllBuilds` in this repository.
 
-# pnpm >= 11 refuses dependency versions younger than `minimumReleaseAge`
-# (supply-chain protection against freshly published releases) unless they are
-# excluded here. React 19.3.1 was published inside that window when this workspace
-# was created; remove these entries once the versions age past the threshold.
+# Dependencies younger than `minimumReleaseAge` are refused unless excluded below: protection
+# against freshly published (possibly compromised) releases. 1440 minutes is also pnpm's built-in
+# default - it is declared here so the policy is explicit and does not drift with a pnpm upgrade.
+# `minimumReleaseAgeStrict` stays at its default (false), so a version inside the window is
+# installed with a warning instead of failing the install.
+minimumReleaseAge: 1440
+
+# React 19.3.1 was published inside that window when this workspace was created; remove these
+# entries once the versions age past the threshold.
 minimumReleaseAgeExclude:
   - react@19.3.1
   - react-dom@19.3.1
