@@ -37,7 +37,8 @@ Rules:
 ### License policy
 
 - Project license: **Apache-2.0** (`LICENSE`, `NOTICE`).
-- Allowed without extra review: MIT, ISC, BSD-2/3-Clause, Apache-2.0, 0BSD, CC0, Unlicense.
+- Allowed without extra review: MIT, ISC, BSD-2/3-Clause, Apache-2.0, 0BSD, CC0, Unlicense,
+  BlueOak-1.0.0.
 - Requires review and a recorded decision: MPL-2.0, LGPL (dynamic linking only), CC-BY-*, and any
   custom license.
 - Not allowed in the product: GPL, AGPL, SSPL, or unlicensed/vendor-proprietary code, including
@@ -45,19 +46,45 @@ Rules:
 - Preserve copyright headers when adapting third-party code, and record the origin in the ADR or
   the commit message.
 
-### Dependency inventory (P0 baseline)
+### Dependency inventory (audited 2026-10-15)
 
-Installed at bootstrap (all permissively licensed — verify before adding more):
+Scope: every installed package in the workspace (`node_modules/.pnpm`), cross-checked against
+`pnpm licenses list --json` **run per importer**. Counting only the repository root under-reports
+the tree — a root-only run listed 130 packages and missed `react`, `react-dom`, `electron`, `zod`
+and 12 others that belong to `apps/*` and `packages/*`.
 
-| Package group                                                       | License          | Scope                 |
-| ------------------------------------------------------------------- | ---------------- | --------------------- |
-| `typescript`, `turbo`, `vitest`, `vite`, `eslint` and their plugins | MIT / Apache-2.0 | development only      |
-| `react`, `react-dom`                                                | MIT              | renderer runtime      |
-| `electron`                                                          | MIT              | desktop shell runtime |
-| `zod`                                                               | MIT              | runtime validation    |
+| License       | Packages | Examples                                                   |
+| ------------- | -------- | ---------------------------------------------------------- |
+| MIT           | 112      | `react`, `react-dom`, `zod`, `electron`, `vite`, `eslint`  |
+| Apache-2.0    | 15       | `typescript`, `@eslint/core`, `detect-libc`                |
+| BSD-2-Clause  | 7        | `espree`, `eslint-scope`, `@electron-internal/extract-zip` |
+| ISC           | 7        | `semver`, `glob-parent`, `graceful-fs`                     |
+| BSD-3-Clause  | 2        | `esquery`, `source-map-js`                                 |
+| MPL-2.0       | 2        | `lightningcss`, `lightningcss-win32-x64-msvc` (build-only) |
+| BlueOak-1.0.0 | 1        | `minimatch` (lint tooling)                                 |
 
-Re-verify with a license scan (for example `pnpm licenses list`) when the dependency set changes;
-P0 added no runtime dependency beyond React, Electron and Zod.
+146 distinct packages / 149 installed instances (three packages have two versions each). **No GPL,
+AGPL, LGPL, SSPL, UNLICENSED or missing license field anywhere in the tree.** `pnpm audit` reports
+`No known vulnerabilities found`.
+
+Artifact closure (what actually ships in the desktop app): `react`, `react-dom`, `scheduler` and
+`zod` are the production dependencies — all MIT. Electron is MIT, and its binary additionally
+carries Chromium (BSD-3-Clause) and Node.js (MIT) notices that must be reproduced at packaging time.
+Everything else, including the only copyleft components, is development-only.
+
+**Recorded decisions (required by the policy above):**
+
+- `MPL-2.0` — `lightningcss` / `lightningcss-win32-x64-msvc`: **approved as a development-only build
+  dependency.** Vite uses it to transform and minify CSS at build time; it is not linked into the
+  emitted bundle (verified: the built renderer bundle contains React runtime markers and zero
+  `lightningcss` references). MPL-2.0 is file-level copyleft, so it does not relicense Auralide's
+  files. Revisit if it ever becomes a runtime dependency.
+- `BlueOak-1.0.0` — `minimatch`: **approved** and added to the allow-list. It is a permissive,
+  OSI-approved license with the same practical effect as MIT/ISC, and the package is used by lint
+  tooling only.
+
+Re-verify with a per-importer license scan whenever the dependency set changes; a license gate in CI
+is a P1 recommendation (see [`docs/reports/P0-bootstrap-report.md`](../reports/P0-bootstrap-report.md)).
 
 ## 3. Untrusted HTML execution (future-facing constraints)
 
