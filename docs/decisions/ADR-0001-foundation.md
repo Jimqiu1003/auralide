@@ -25,12 +25,17 @@ possibly in parallel. That imposes requirements a normal greenfield repository d
 
 ### 1. A standalone repository with the Apache-2.0 license
 
-Auralide lives in its own GitHub repository (`auralide`, private during development) rather than
-inside any existing project. It is licensed **Apache-2.0**, which provides an explicit patent grant
-and allows future commercial distribution while remaining friendly to contributors.
+Auralide lives in its own GitHub repository (`auralide`) rather than inside any existing project. It
+is licensed **Apache-2.0**, which provides an explicit patent grant and allows future commercial
+distribution while remaining friendly to contributors.
 
-The repository stays **private** until the owner decides otherwise; nothing in the toolchain
-publishes packages or artifacts.
+The repository was created **private** on 2026-10-15 and the owner approved publishing it the same
+day; it is **public** as of 2026-10-15. Nothing in the toolchain publishes packages or artifacts, and
+no secrets were committed (verified by an 11-pattern scan over every tracked file and every commit
+before the visibility change). Going public also unlocked the controls the Free plan withholds from
+private repositories: a `main-protection` ruleset (pull request required, `verify` check required,
+force pushes and deletion rejected, no bypass actors), secret scanning with push protection, and
+Dependabot vulnerability alerts.
 
 ### 2. TypeScript strict everywhere
 

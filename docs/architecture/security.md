@@ -14,13 +14,15 @@ Nothing here replaces a threat model for the finished product.
 
 ## 2. Supply chain
 
-| Control                  | Setting                                                                                                                                                                                                                                                                      |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reproducible installs    | committed `pnpm-lock.yaml`; CI runs `pnpm install --frozen-lockfile`                                                                                                                                                                                                         |
-| Dependency build scripts | denied by default (`pnpm-workspace.yaml` has no `allowBuilds` entries); `strictDepBuilds` is true, so meeting an unreviewed install script fails the install with `ERR_PNPM_IGNORED_BUILDS` instead of running it. Verified: no dependency in the P0 tree requires approval. |
-| Fresh-release protection | pnpm `minimumReleaseAge`; currently `react`/`react-dom@19.3.1` are excluded because they were published inside the window. Remove the exclusion once the versions age.                                                                                                       |
-| Registry                 | default `https://registry.npmjs.org`; changing it is an ADR-level decision                                                                                                                                                                                                   |
-| Lockfile verification    | pnpm 12 verifies the lockfile against supply-chain policies on install                                                                                                                                                                                                       |
+| Control                          | Setting                                                                                                                                                                                                                                                                      |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reproducible installs            | committed `pnpm-lock.yaml`; CI runs `pnpm install --frozen-lockfile`                                                                                                                                                                                                         |
+| Dependency build scripts         | denied by default (`pnpm-workspace.yaml` has no `allowBuilds` entries); `strictDepBuilds` is true, so meeting an unreviewed install script fails the install with `ERR_PNPM_IGNORED_BUILDS` instead of running it. Verified: no dependency in the P0 tree requires approval. |
+| Fresh-release protection         | pnpm `minimumReleaseAge`; currently `react`/`react-dom@19.3.1` are excluded because they were published inside the window. Remove the exclusion once the versions age.                                                                                                       |
+| Registry                         | default `https://registry.npmjs.org`; changing it is an ADR-level decision                                                                                                                                                                                                   |
+| Lockfile verification            | pnpm 12 verifies the lockfile against supply-chain policies on install                                                                                                                                                                                                       |
+| Secret + vulnerability detection | secret scanning with **push protection** enabled, plus **Dependabot vulnerability alerts** (both available because the repository is public). Automated dependency-update PRs remain off.                                                                                    |
+| Main branch integrity            | ruleset `main-protection`: pull request required, `verify` check required, force pushes and deletion rejected, no bypass actors                                                                                                                                              |
 
 Rules:
 
@@ -117,13 +119,17 @@ That is the highest-risk surface of the product, and the constraints are fixed n
   (or header-based CSP from the main process) is implemented in P1.
 - No preload/IPC bridge exists yet, so there is no privileged API surface to review; adding one
   requires the allow-list review described above.
-- Dependabot/automated dependency updates and secret scanning are not enabled yet (see P1
-  recommendations in the P0 report).
+- Automated dependency **update** pull requests are off; Dependabot **vulnerability alerts**, secret
+  scanning and push protection are enabled (the repository is public, so they no longer need GitHub
+  Pro). Remaining gap: no license/`pnpm audit` gate in CI yet (see P1 recommendations in the P0
+  report).
 
 ## 4. Repository hygiene
 
 - Build output (`dist/`), caches (`.turbo/`), coverage and logs are ignored.
 - Generated TypeScript output must never be written next to sources; `rootDir`/`outDir` per project
   is what prevents it (this failed once during P0 — see the report).
-- Commits are reviewed through Pull Requests; `main` is protected as far as the GitHub plan allows
-  (see the P0 report for the exact, verified state).
+- Commits are reviewed through Pull Requests. `main` is enforced by the repository ruleset
+  `main-protection` — pull request required, `verify` status check required, force pushes and
+  deletion rejected, and no bypass actors. A direct push is refused by the server (`GH013`), which
+  was verified end to end with the local hook bypassed. See CONTRIBUTING.md for the rule table.
