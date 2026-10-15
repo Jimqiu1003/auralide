@@ -94,3 +94,7 @@ QA owner through Issue/PR before adding fixtures or files in `docs/qa` and `test
 Production acceptance additionally needs screen-reader review, real DPI/multi-display resize,
 native menus, guest overlay/focus tests and Windows/macOS screenshots. Wireframes cannot verify
 those native behaviors. Artifact-specific browser results belong in the P1.5 report, not assumptions.
+
+## Reproduce wireframe checks
+
+After pnpm install and pnpm build, run node apps/desktop/test/wireframes.electron.mjs from repository root. It loads the local HTML in an isolated auxiliary Electron window, checks twelve views, themes, shortcuts and keyboard focus, and writes ignored screenshots/results under desktop test-artifacts/wireframes. No server is required. The owner selected direction A on 2026-10-15; the other directions remain review references.

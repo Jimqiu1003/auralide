@@ -1,6 +1,6 @@
 # P1.5 UI architecture alternatives
 
-Status: **Proposed — no primary direction selected**. Issue #17. Review the editable, standalone
+Status: **A selected by the owner on 2026-10-15**. B/C remain reference alternatives. Issue #17. Review the editable, standalone
 [HTML wireframe](workspace-wireframes.html). It has three directions, four workspace views per
 direction, theme and platform controls. All content is sample data; no documents, files, agents or
 network resources are opened. Editing its HTML/CSS source changes the wireframe.
@@ -57,7 +57,7 @@ The wireframe illustrates layout differences; it does not simulate object editin
 
 ## Owner decisions requested after review
 
-1. Choose A, B or C as the primary IA (or identify specific changes before selection).
+1. Primary IA: **A — Canvas first / stable panels**, selected by the owner.
 2. Confirm initial panel density and acceptable minimum canvas area on a laptop.
 3. Confirm whether Agent should be persistent (C) or a workspace (A/B).
 
