@@ -135,3 +135,5 @@ is hidden is a defect.
   in parallel on the zones listed above.
 
 - **P1.5 (current):** Issues #15–#18. Lead writes runtime/platform/design work sequentially; no sub-agents under the current owner instruction. QA @Lsc-91-69 owns independent compatibility work through #18. No QA fixtures or docs are modified by the runtime workstream. Owner approval is required before full UI implementation and before any PR merge.
+
+- **P2A (experimental, current):** Issue #22, sequential Lead-owned storage/session increment on the unmerged P1.5 stack. Direction A is selected; ADR-0005/0006 remain Proposed. Human QA zones remain unchanged. No automatic merges.

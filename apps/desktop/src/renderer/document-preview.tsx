@@ -25,7 +25,9 @@ export function DocumentPreview(): JSX.Element {
         setDocument(value);
         const firstText = value.slides[0]?.elements.find((element) => element.kind === 'text');
         setText(firstText?.kind === 'text' ? firstText.text : '');
-        setMessage('Ready. Changes remain in memory for this session.');
+        setMessage(
+          'Ready. Save document to keep changes on disk. Undo history remains session-only.',
+        );
         setBusy(false);
       },
       (error: unknown) => {
@@ -66,11 +68,35 @@ export function DocumentPreview(): JSX.Element {
     }
   };
 
+  const fileAction = async (operation: 'saveDocument' | 'openDocument'): Promise<void> => {
+    if (document === null || busy || window.auralide === undefined) return;
+    setBusy(true);
+    try {
+      const result = await window.auralide[operation]({ expectedRevision: document.revision });
+      if (result.ok) {
+        setDocument(result.value.document);
+        const element = result.value.document.slides[0]?.elements.find(
+          (candidate) => candidate.kind === 'text',
+        );
+        setText(element?.kind === 'text' ? element.text : '');
+        setMessage(
+          `${operation === 'saveDocument' ? 'Saved' : 'Opened'} ${result.value.fileName}.${result.value.backupCreated ? ' Previous file retained as a recovery backup.' : ''}${result.value.historyReset ? ' Session undo history reset. Render Aura again for this revision.' : ''}`,
+        );
+      } else {
+        setMessage(`File operation refused: ${result.error.code}. ${result.error.message}`);
+      }
+    } catch (error: unknown) {
+      setMessage(String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className="document" aria-labelledby="document-heading" aria-busy={busy}>
       <header className="document-heading">
         <div>
-          <p className="eyebrow">P1 · Document workbench</p>
+          <p className="eyebrow">P2A · Document workbench</p>
           <h2 id="document-heading">{document?.title ?? 'Welcome to Auralide'}</h2>
         </div>
         <span>
@@ -143,6 +169,24 @@ export function DocumentPreview(): JSX.Element {
       <p role="status" data-testid="document-status">
         {message}
       </p>
+      <div className="text-edit">
+        <button
+          type="button"
+          data-testid="document-save"
+          disabled={document === null || busy}
+          onClick={() => void fileAction('saveDocument')}
+        >
+          Save document
+        </button>
+        <button
+          type="button"
+          data-testid="document-open"
+          disabled={document === null || busy}
+          onClick={() => void fileAction('openDocument')}
+        >
+          Open document
+        </button>
+      </div>
     </section>
   );
 }

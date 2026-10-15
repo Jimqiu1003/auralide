@@ -5,7 +5,7 @@ Owner contract, 2026-10-15; [ADR-0003](../decisions/ADR-0003-platform-support.md
 | Target                                                    | Contract                        | Validation at authoring                                                 |
 | --------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------- |
 | Windows x64                                               | First release                   | Local validation reported with the delivery; CI must independently pass |
-| macOS ARM64 / Apple Silicon                               | First release                   | CI path established; real startup NOT RUN locally                       |
+| macOS ARM64 / Apple Silicon                               | First release                   | Native ARM64 CI startup and Aura smoke PASS; physical manual QA pending |
 | Windows ARM64                                             | Future                          | No build job                                                            |
 | Linux                                                     | Future, architectures undecided | No build job                                                            |
 | macOS Intel / Universal, Windows x86, unspecified targets | Unsupported                     | No build job                                                            |
@@ -76,6 +76,4 @@ reused the shared Turbo cache); the independent evidence validator self-check pa
 24.21.0 and Electron 44.7.2 both reported Windows x64; production/development desktop smoke passed
 89/89 assertions. Evidence is under this branch's ignored desktop `test-artifacts/` directory.
 
-The local authoring host is Windows; macOS startup remains **NOT RUN** until a linked CI run contains
-matching native identity and passing smoke artifacts. CI URLs and results are consolidated by the
-Lead in `docs/reports/P1.5-report.md`.
+The authoring host is Windows. Native macOS ARM64 Aura startup and production/development smoke passed in CI 38747803700 at 65be406; hardware and Electron process identity were checked in downloaded artifacts. See docs/reports/P1.5-report.md. P2A adds actual bounded document writes and its own native CI round trip; see docs/reports/P2A-implementation-report.md for that separate gate. Physical DPI, screen-reader and menu interaction acceptance remains pending. PowerShell is developer tooling only.

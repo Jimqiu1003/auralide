@@ -7,6 +7,7 @@
 
 import type { CommandEnvelope, CommandError, Presentation, Result } from '@auralide/core';
 import type { AuraRequest, AuraResult } from '@auralide/agent';
+import type { FileResult } from './document-files.js';
 
 /** How the window was loaded. The two paths differ only in this. */
 export type LoadPath = 'development' | 'production';
@@ -48,6 +49,8 @@ export type AuralideApi = {
   readonly ping: (request: PingRequest) => Promise<PingResponse>;
   readonly getDocument: () => Promise<Presentation>;
   readonly applyCommand: (command: CommandEnvelope) => Promise<Result<Presentation, CommandError>>;
+  readonly saveDocument: (request: { expectedRevision: number }) => Promise<FileResult>;
+  readonly openDocument: (request: { expectedRevision: number }) => Promise<FileResult>;
   readonly auraInvoke: (request: AuraRequest) => Promise<AuraResult>;
   readonly auraSetBounds: (bounds: {
     x: number;

@@ -4,12 +4,12 @@
 freedom of HTML/CSS/SVG with direct manipulation, on top of a structured document model that humans
 and AI agents edit through the same validated command layer.
 
-> Status: **P1 — runtime & core foundation**. P0 delivered the monorepo, tooling, CI and architecture
-> records (see [`docs/reports/P0-bootstrap-report.md`](docs/reports/P0-bootstrap-report.md)). P1 adds a
-> really starting Electron shell with a safe preload/IPC boundary, plus the first structured document
-> model and command dispatcher (see [`docs/architecture/p1-plan.md`](docs/architecture/p1-plan.md)).
-> P1 includes a small document workbench: a Core-driven slide preview and validated text edit.
-> Documents remain in memory; storage, full canvas editing and export are later phases.
+> Status: **P2A — experimental Durable Document Foundation**, on the unmerged P1.5 PR stack.
+> Windows x64 and macOS ARM64 are the first-release targets. The desktop provides a Core-driven
+> workbench, validated commands, isolated Aura preview and local JSON save/reopen. Undo history
+> remains session-only; full editor UI, external Agent Apply, arbitrary HTML import and export are
+> deferred. See [P2 plan](docs/architecture/p2-vertical-slice-plan.md) and
+> [Architecture V2 proposal](docs/architecture/architecture-v2.md). Historical P0/P1 reports remain unchanged.
 
 ## Requirements
 
@@ -85,4 +85,18 @@ Apache-2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
 ## P1.5 preview
 
-Supported development targets are Windows x64 and macOS ARM64; see [platform contract](docs/architecture/platform-support.md). The bounded [Aura Browser POC](docs/architecture/aura-browser.md) adds a Core preview, reviewed HTML Lab fixture, stable-ID inspection and screenshot capture. It has no arbitrary page loading or script execution. Build the workspace before starting the desktop. The UI remains a diagnostic shell while [three workspace directions](docs/design/ui-architecture.md) await owner selection; design files arrive in the dependent UI PR.
+Supported development targets are Windows x64 and macOS ARM64; see [platform contract](docs/architecture/platform-support.md). The bounded [Aura Browser POC](docs/architecture/aura-browser.md) adds a Core preview, reviewed HTML Lab fixture, stable-ID inspection and screenshot capture. It has no arbitrary page loading or script execution. Build the workspace before starting the desktop. The UI remains a diagnostic shell with [direction A selected](docs/design/ui-architecture.md); B/C remain references and full shell implementation is deferred.
+
+## Save and reopen (P2A)
+
+Build with `pnpm build`, then `pnpm --filter @auralide/desktop start`. Apply a text edit and choose
+**Save document** in the workbench. Main opens a native file dialog; no path is accepted from the
+renderer. Subsequent saves retain uniquely named `.bak` recovery files beside the document. These
+backups are not automatically deleted. Reopen with **Open document**, including after restarting.
+Opening or closing over unsaved edits requires confirmation. A file changed by another program is
+refused rather than silently overwritten. Documents are limited to 20 MiB in this experimental slice.
+
+Reopen preserves content/IDs, starts empty undo history and advances the session revision to reject
+stale intent. Refresh Aura after reopening. This snapshot format does not persist command history.
+Run `node apps/desktop/test/persistence.electron.mjs` after building to exercise real save/restart/
+reopen/HTML preview; only native dialog selections are stubbed in that test.
