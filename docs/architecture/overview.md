@@ -1,8 +1,9 @@
 # Auralide Architecture Overview
 
-Status: **P1.5 — platform and isolated Aura Browser POC** (a really starting Electron shell and a structured document
-model with a validated command layer; still no editor UI).
-Phase plan: [`p1-plan.md`](p1-plan.md). Decisions: [`docs/decisions/`](../decisions/).
+Status: **P2A — experimental snapshot persistence** on the unmerged P1.5 stack. Core commands and
+isolated Aura preview exist; full editor UI remains deferred. Current plan:
+[`p2-vertical-slice-plan.md`](p2-vertical-slice-plan.md); proposed alignment:
+[`architecture-v2.md`](architecture-v2.md). Decisions: [`docs/decisions/`](../decisions/).
 
 ## 1. What Auralide is
 
@@ -71,13 +72,16 @@ This is why `core` owns commands and history while `editor-ui` owns only present
 - The Electron main process is the only place with privileged APIs; the renderer talks to it through
   an explicit, validated bridge (added in P1 with a preload script).
 
-## 5. Storage (future design commitment; not implemented)
+## 5. Storage (P2A snapshot implemented; persistent history deferred)
 
 Local-first: documents are files on disk owned by the user.
 
-- A project is a directory (or an archive) containing a structured document file plus assets.
+- P2A saves one validated Presentation JSON file through main-owned dialogs. Assets and project
+  archives remain future work.
 - The structured model is the source of truth; rendered HTML is derived.
-- Future persistent history must be stored with the document. Current P1/P1.5 history and documents are in memory and are discarded on application exit.
+- P2A persists document snapshots, with staged writes and recovery backups; undo history stays in
+  memory and resets on reopen. Proposed ADR-0005 records this explicit boundary. Historical P1/P1.5
+  had no persistent writes.
 - No Auralide server is required to open, edit or export a document.
 
 ## 6. Technology baseline

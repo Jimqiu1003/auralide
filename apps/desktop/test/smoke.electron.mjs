@@ -259,7 +259,7 @@ async function runMode(mode) {
     check(
       'bridge-version',
       await page.locator('[data-testid="bridge-version"]').textContent(),
-      '1.2.0',
+      '1.3.0',
     );
 
     // Renderer boundary: nothing but the frozen bridge is reachable.
@@ -280,7 +280,7 @@ async function runMode(mode) {
     check(
       'bridge keys',
       exposed.keys,
-      'applyCommand,auraInvoke,auraSetBounds,bridgeVersion,getDocument,getRuntimeInfo,ping',
+      'applyCommand,auraInvoke,auraSetBounds,bridgeVersion,getDocument,getRuntimeInfo,openDocument,ping,saveDocument',
     );
     checkTruthy('bridge is frozen', exposed.frozen);
 
@@ -470,7 +470,15 @@ async function runMode(mode) {
         2,
       )}\n`,
     );
-    if (app !== undefined) await app.close().catch(() => undefined);
+    if (app !== undefined) {
+      // Test teardown discards this synthetic session; user-facing close confirmation is separate.
+      await app
+        .evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows().forEach((window) => window.destroy()),
+        )
+        .catch(() => undefined);
+      await app.close().catch(() => undefined);
+    }
     stopDevServer(devServer);
   }
 }
