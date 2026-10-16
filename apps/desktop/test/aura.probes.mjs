@@ -64,7 +64,9 @@ export async function auraProbes(app, page, mode, artifacts, check) {
         scrollY,
       };
     });
-    throw new Error(`${String(error)}; geometry=${JSON.stringify(geometry)}; guests=${JSON.stringify(await snapshot())}`);
+    throw new Error(
+      `${String(error)}; geometry=${JSON.stringify(geometry)}; guests=${JSON.stringify(await snapshot())}`,
+    );
   }
   const views = await snapshot();
   check('Aura uses one native view', views.length, 1);
