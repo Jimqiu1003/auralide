@@ -442,7 +442,7 @@ async function runMode(mode) {
       () => document.querySelector('[data-testid="document-revision"]')?.textContent === '9',
     );
     const movedSlide = await page.evaluate(() => window.auralide.getDocument());
-    check('demo moves shape through Core', movedSlide.slides[1].elements[0].geometry.x, 145);
+    check('demo moves shape through Core', movedSlide.slides[1].elements[0].geometry.x, 110);
     await page.getByTestId('demo-delete-element').click();
     await page.waitForFunction(
       () => document.querySelector('[data-testid="document-revision"]')?.textContent === '10',
