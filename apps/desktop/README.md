@@ -72,28 +72,3 @@ built `dist/renderer/index.html` stays strict, the served dev page carries the d
 ## Aura Browser POC
 
 Run pnpm build from the repository root, then start the desktop as above. Choose **Preview Core slide** or **HTML Lab fixture**. Inspect the stable element, capture the preview, resize the pane and test a shell overlay. Edit through the existing document workbench and render again to refresh the revision. Arbitrary HTML, URLs, scripts and assets are unavailable. See [Aura architecture](../../docs/architecture/aura-browser.md) and [tool contract](../../docs/architecture/agent-browser-contract.md).
-
-
-## Desktop Demo 0.1 — Windows portable test build
-
-The canvas-first UI is developed in PR #24 and remains a demo, not a completed presentation
-suite. The dependent packaging PR #25 produces an **unsigned Windows x64 portable directory**
-that runs without installing Node.js or pnpm. This is not an MSI installer or a signed release.
-
-After building all workspaces, run on native Windows x64:
-
-```powershell
-pnpm build
-node apps/desktop/scripts/package-portable.mjs
-node apps/desktop/test/portable.electron.mjs
-```
-
-The output directory is `apps/desktop/dist/portable/Auralide-win32-x64/`. Keep the complete
-directory (including `resources`, DLLs and license notices). Launch `Auralide.exe`; do not
-copy only the executable. The CI workflow `Portable Desktop Demo` uploads the verified
-directory as a ZIP artifact. Windows may warn about the unknown publisher because this build
-is not code-signed. Verify the source repository before running it.
-
-Windows x64 is the only portable distribution produced by this experiment. Native macOS
-Apple Silicon smoke verification remains part of the main CI; macOS packaging, signing and
-notarization are outside this PR.
