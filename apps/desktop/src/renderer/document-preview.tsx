@@ -311,9 +311,7 @@ export function DocumentPreview(): JSX.Element {
                 <span className="slide-index">{index + 1}</span>
                 <span className="slide-thumb" style={{ background: item.backgroundColor ?? '#fff' }}>
                   <span style={{ color: item.backgroundColor === '#171b2b' ? '#fff' : '#344054' }}>
-                    {item.elements.find((element) => element.kind === 'text')?.kind === 'text'
-                      ? item.elements.find((element) => element.kind === 'text')?.text.slice(0, 25)
-                      : item.name ?? 'New slide'}
+                    {(() => { const preview = item.elements.find((element) => element.kind === 'text'); return preview?.kind === 'text' ? preview.text.slice(0, 25) : (item.name ?? 'New slide'); })()}
                   </span>
                 </span>
                 <span className="slide-caption">{item.name ?? 'Slide ' + (index + 1)}</span>
@@ -331,7 +329,7 @@ export function DocumentPreview(): JSX.Element {
           </div>
           <div className="canvas-stage">
             {document !== null && slide !== undefined ? (
-              <svg className="slide-preview" viewBox={'0 0 ' + document.slideSize.width + ' ' + document.slideSize.height}
+              <svg className="slide-preview" style={{ width: zoom + '%' }} viewBox={'0 0 ' + document.slideSize.width + ' ' + document.slideSize.height}
                 role="img" aria-label={slide.name ?? 'Slide preview'} data-testid="slide-preview"
                 onPointerMove={pointerMove} onPointerUp={pointerUp}
                 onPointerCancel={() => { drag.current = null; setDragPreview(null); }}>
