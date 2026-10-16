@@ -79,8 +79,8 @@ function Diagnostics(): JSX.Element {
       <h1 data-testid="app-name">{PRODUCT_NAME}</h1>
       <p className="subtitle">A structured presentation, edited through one command path.</p>
 
-      <AuraPoc />
       <DocumentPreview />
+      <AuraPoc />
 
       <dl className="facts">
         <dt>status</dt>
