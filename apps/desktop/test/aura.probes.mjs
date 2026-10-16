@@ -58,14 +58,15 @@ export async function auraProbes(app, page, mode, artifacts, check) {
         right: rect.right,
         width: rect.width,
         height: rect.height,
-        viewportWidth: innerWidth,
-        viewportHeight: innerHeight,
+        viewportWidth: element.ownerDocument.defaultView?.innerWidth ?? 0,
+        viewportHeight: element.ownerDocument.defaultView?.innerHeight ?? 0,
         hidden: document.hidden,
-        scrollY,
+        scrollY: element.ownerDocument.defaultView?.scrollY ?? 0,
       };
     });
     throw new Error(
       `${String(error)}; geometry=${JSON.stringify(geometry)}; guests=${JSON.stringify(await snapshot())}`,
+      { cause: error },
     );
   }
   const views = await snapshot();
