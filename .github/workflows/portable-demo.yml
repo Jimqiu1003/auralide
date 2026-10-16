@@ -1,0 +1,38 @@
+name: Portable Desktop Demo
+
+on:
+  pull_request:
+    paths:
+      - apps/desktop/**
+      - .github/workflows/portable-demo.yml
+
+permissions:
+  contents: read
+
+jobs:
+  windows-portable:
+    name: Windows x64 portable app
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          architecture: x64
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Create unsigned Windows portable app
+        run: node apps/desktop/scripts/package-portable.mjs
+      - name: Boot packaged executable in real Electron
+        run: node apps/desktop/test/portable.electron.mjs
+      - name: Upload portable Auralide app
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Auralide-Demo-0.1-Windows-x64
+          path: apps/desktop/dist/portable/Auralide-win32-x64/
+          if-no-files-found: warn
+          compression-level: 6
