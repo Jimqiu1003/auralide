@@ -183,7 +183,7 @@ export function DocumentPreview(): JSX.Element {
     }, {}, slide.id, '');
   };
 
-  const move = async (x: number, y: number, id = selected?.id, onSlide = slide?.id): Promise<void> => {
+  const move = async (x: number, y: number, id: string | undefined = selected?.id, onSlide: string | undefined = slide?.id): Promise<void> => {
     if (id === undefined || onSlide === undefined) return;
     await apply('element.move', {
       kind: 'element', slideId: onSlide, elementId: id,
