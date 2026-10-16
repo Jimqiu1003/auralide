@@ -68,8 +68,8 @@ await writeFile(
 );
 await writeFile(
   join(portableDir, 'README.txt'),
-  'Auralide Desktop Demo 0.1 — unsigned Windows x64 test build.\\n' +
-    'Keep the entire extracted directory together. Not a production release.\\n',
+  'Auralide Desktop Demo 0.1 — unsigned Windows x64 test build.\n' +
+    'Keep the entire extracted directory together. Not a production release.\n',
 );
 await rename(join(portableDir, 'electron.exe'), join(portableDir, 'Auralide.exe'));
 process.stdout.write(`Windows x64 unsigned portable Demo: ${portableDir}\n`);
