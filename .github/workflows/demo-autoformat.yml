@@ -27,11 +27,11 @@ jobs:
           node-version: 24
       - run: pnpm install --frozen-lockfile
       - name: Format changed demo UI
-        run: pnpm exec prettier --write apps/desktop/src/renderer/document-preview.tsx apps/desktop/src/renderer/styles.css apps/desktop/test/smoke.electron.mjs
+        run: pnpm exec prettier --write apps/desktop/src/renderer/document-preview.tsx apps/desktop/src/renderer/styles.css apps/desktop/test/smoke.electron.mjs apps/desktop/test/aura.probes.mjs
       - name: Commit formatted files if different
         shell: bash
         run: |
-          git add apps/desktop/src/renderer/document-preview.tsx apps/desktop/src/renderer/styles.css apps/desktop/test/smoke.electron.mjs
+          git add apps/desktop/src/renderer/document-preview.tsx apps/desktop/src/renderer/styles.css apps/desktop/test/smoke.electron.mjs apps/desktop/test/aura.probes.mjs
           if ! git diff --cached --quiet; then
             git -c user.name='auralide-ci' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'style(demo): format desktop workspace'
             git push origin HEAD:feat/demo-v01-workspace
