@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'"
+    />
+    <title>三种表达，一个创作中心 — Auralide Demo 0.2</title>
+    <link rel="stylesheet" href="review.css" />
+  </head>
+  <body>
+    <header>
+      <a class="wordmark" href="index.html">a<span>Auralide</span></a
+      ><span>DESKTOP DEMO 0.2 / DESIGN REVIEW</span
+      ><a href="../../reports/demo-v02-design-review.md">完整评审记录 ↗</a>
+    </header>
+    <main>
+      <section class="intro">
+        <p class="overline">画布优先，固定面板</p>
+        <h1>三种表达，<br />一个创作中心。</h1>
+        <p class="lead">
+          把注意力还给演示本身。比较三个可以操作的桌面原型，<br />为 Auralide 选择下一步的设计方向。
+        </p>
+        <div class="review-note">
+          <span>01 / 打开一个方案</span><span>02 / 试着完成一次编辑</span
+          ><span>03 / 选择最顺手的方向</span>
+        </div>
+      </section>
+      <section class="directions" aria-label="三个交互原型">
+        <article>
+          <div class="direction-heading">
+            <span class="number">A1</span>
+            <div>
+              <p>安静 · 精密 · 画布主导</p>
+              <h2>Cupertino Precision</h2>
+            </div>
+            <span class="recommendation">推荐主方向</span>
+          </div>
+          <a class="preview" href="a1.html" aria-label="打开 A1 Cupertino Precision 交互原型"
+            ><img
+              src="evidence/a1-light-1440x900-editor.png"
+              alt="A1 实际原型截图：精简单行工具栏、左侧幻灯片、中央画布与右侧属性"
+          /></a>
+          <div class="direction-detail">
+            <p>更轻的工具栏，更大的创作空间。图层与幻灯片分页呈现，精简 Inspector 保持稳定。</p>
+            <a class="open" href="a1.html">打开 A1 原型 <span>↗</span></a>
+          </div>
+        </article>
+        <article>
+          <div class="direction-heading">
+            <span class="number">A2</span>
+            <div>
+              <p>专业 · 可发现 · 高效率</p>
+              <h2>Studio Productivity</h2>
+            </div>
+          </div>
+          <a class="preview" href="a2.html" aria-label="打开 A2 Studio Productivity 交互原型"
+            ><img
+              src="evidence/a2-light-1440x900-editor.png"
+              alt="A2 实际原型截图：分组功能栏、幻灯片与折叠图层区、对象格式面板"
+          /></a>
+          <div class="direction-detail">
+            <p>常用动作直接可见。上下文工具组连接选择与格式，降低中文办公用户的学习成本。</p>
+            <a class="open" href="a2.html">打开 A2 原型 <span>↗</span></a>
+          </div>
+        </article>
+        <article>
+          <div class="direction-heading">
+            <span class="number">A3</span>
+            <div>
+              <p>直观 · 图层清晰 · 创作自由</p>
+              <h2>Focus Layers</h2>
+            </div>
+          </div>
+          <a class="preview" href="a3.html" aria-label="打开 A3 Focus Layers 交互原型"
+            ><img
+              src="evidence/a3-light-1440x900-editor.png"
+              alt="A3 实际原型截图：紧凑页面概览、常驻对象图层、画布工具与设计检查器"
+          /></a>
+          <div class="direction-detail">
+            <p>让对象结构始终可见。紧凑页面概览和独立画布工具组，服务于频繁的对象选择与调整。</p>
+            <a class="open" href="a3.html">打开 A3 原型 <span>↗</span></a>
+          </div>
+        </article>
+      </section>
+      <section class="how-to">
+        <h2>用同一段流程，感受差异。</h2>
+        <p>
+          切换幻灯片 → 选择文字 → 修改并应用 → 选择形状 → 在「排列」调整尺寸 → 模拟保存 →
+          再编辑并模拟重开 → 切换 Aura → 返回编辑器。
+        </p>
+        <p>再用 Shift 多选、方向键、Tab 和明暗主题检查你日常使用的方式。</p>
+        <div class="boundary">
+          <strong>这是视觉与交互原型。</strong>
+          <p>
+            编辑、撤销、保存与打开仅在本页内存中模拟，刷新即丢失。没有 Agent
+            服务、真实文件读写、联网研究或发布能力。Aura 使用受限 iframe
+            模拟，正式应用安全架构不受修改。
+          </p>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <span>Auralide / Local-first. Open by design.</span
+      ><span>视觉方案待负责人选择 · 不自动替换正式编辑器</span>
+    </footer>
+  </body>
+</html>
