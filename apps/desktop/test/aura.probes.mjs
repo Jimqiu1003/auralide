@@ -38,6 +38,8 @@ export async function auraProbes(app, page, mode, artifacts, check) {
   };
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByTestId('aura-render').click();
+  // Canvas-first Demo puts Aura below the editor. The native guest must be wholly in view.
+  await page.getByTestId('aura-surface').scrollIntoViewIfNeeded();
   await page.waitForFunction(() =>
     document.querySelector('[data-testid="aura-result"]')?.textContent?.includes('"slide-preview"'),
   );
