@@ -46,7 +46,26 @@ export async function auraProbes(app, page, mode, artifacts, check) {
   const rendered = JSON.parse(await page.getByTestId('aura-result').textContent());
   check('Aura render succeeds', rendered.ok, true);
   const tab = rendered.value;
-  await wait(async () => (await snapshot())[0]?.visible === true, 'visible native preview');
+  try {
+    await wait(async () => (await snapshot())[0]?.visible === true, 'visible native preview');
+  } catch (error) {
+    const geometry = await page.getByTestId('aura-surface').evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        height: rect.height,
+        viewportWidth: innerWidth,
+        viewportHeight: innerHeight,
+        hidden: document.hidden,
+        scrollY,
+      };
+    });
+    throw new Error(`${String(error)}; geometry=${JSON.stringify(geometry)}; guests=${JSON.stringify(await snapshot())}`);
+  }
   const views = await snapshot();
   check('Aura uses one native view', views.length, 1);
   check('Aura session isolated from editor', views[0].isolated, true);
