@@ -129,7 +129,11 @@ export function DocumentPreview(): JSX.Element {
         return false;
       }
       adopt(result.value, nextSlide, nextElement);
-      setMessage('Applied ' + operation + ' · revision ' + result.value.revision);
+      setMessage(
+        operation === 'element.updateText'
+          ? 'Text updated through Core.'
+          : 'Applied ' + operation + ' · revision ' + result.value.revision,
+      );
       return true;
     } catch (error: unknown) {
       setMessage('Edit failed: ' + description(error));
