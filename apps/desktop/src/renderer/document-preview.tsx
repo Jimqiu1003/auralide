@@ -223,10 +223,11 @@ export function DocumentPreview(): JSX.Element {
       y: (event.clientY - rect.top - yOffset) / scale };
   };
 
-  const pointerDown = (event: ReactPointerEvent<SVGSVGElement>, item: Element): void => {
+  const pointerDown = (event: ReactPointerEvent<SVGGElement>, item: Element): void => {
     if (busy || slide === undefined) return;
     selectElement(item);
-    const point = canvasCoordinate(event);
+    const svg = event.currentTarget.ownerSVGElement;
+    const point = svg === null ? null : canvasCoordinate({ currentTarget: svg, clientX: event.clientX, clientY: event.clientY } as ReactPointerEvent<SVGSVGElement>);
     if (point === null) return;
     drag.current = {
       elementId: item.id, slideId: slide.id,
