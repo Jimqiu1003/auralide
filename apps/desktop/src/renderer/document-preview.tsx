@@ -736,7 +736,8 @@ export function DocumentPreview(): JSX.Element {
         </aside>
       </div>
       <div className="editor-status" role="status" data-testid="document-status">
-        <span className="status-dot" aria-hidden="true" />{message}
+        <span className="status-dot" aria-hidden="true" />
+        <span>{message}</span>
       </div>
     </section>
   );
