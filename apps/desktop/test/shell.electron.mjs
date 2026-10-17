@@ -420,7 +420,7 @@ try {
     dialog.showOpenDialog = async () => ({ canceled: true, filePaths: [] });
   });
   await page.getByTestId('document-open').click();
-  await page.getByRole('button', { name: '继续选择文件' }).click();
+  await page.getByRole('button', { name: '继续操作' }).click();
   await status('已取消');
   check(
     'open cancellation keeps unapplied draft',
@@ -428,7 +428,7 @@ try {
     '跨工作区保留的草稿',
   );
   await page.getByTestId('document-save').click();
-  await page.getByRole('button', { name: '应用文本并保存' }).click();
+  await page.getByRole('button', { name: '应用文本并继续' }).click();
   await status('已保存');
   check(
     'save commits pending text through Dispatcher to actual file',

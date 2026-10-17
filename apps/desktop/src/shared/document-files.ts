@@ -1,3 +1,4 @@
+import type { HtmlImportReport } from '@auralide/html-bridge';
 import type { Presentation, Result } from '@auralide/core';
 
 export type FileErrorCode =
@@ -22,5 +23,6 @@ export interface FileOutcome {
   readonly fileName: string;
   readonly backupCreated: boolean;
   readonly historyReset: boolean;
+  readonly importReport?: HtmlImportReport;
 }
 export type FileResult = Result<FileOutcome, FileError>;

@@ -9,6 +9,17 @@ import type { JSX, PointerEvent as ReactPointerEvent } from 'react';
 
 const ids = createIdGenerator();
 
+type FileOperation =
+  'saveDocument' | 'saveDocumentAs' | 'openDocument' | 'newDocument' | 'importHtml' | 'exportHtml';
+const fileLabels: Record<FileOperation, string> = {
+  newDocument: '新建',
+  openDocument: '打开',
+  saveDocument: '保存',
+  saveDocumentAs: '另存为',
+  importHtml: '导入 HTML',
+  exportHtml: '导出 HTML',
+};
+
 type DragState = {
   elementId: string;
   slideId: string;
@@ -49,6 +60,7 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
   const [modal, setModal] = useState<
     'menu' | 'save-drafts' | 'open-drafts' | 'delete-slide' | null
   >(null);
+  const pendingFileOperation = useRef<FileOperation>('saveDocument');
   const dialogRef = useRef<HTMLDialogElement>(null);
   const invoker = useRef<HTMLElement | null>(null);
   const locked = useRef(false);
@@ -273,14 +285,13 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
     );
   };
 
-  const fileAction = async (
-    operation: 'saveDocument' | 'openDocument',
-    confirmed = false,
-  ): Promise<void> => {
+  const fileAction = async (operation: FileOperation, confirmed = false): Promise<void> => {
     const bridge = window.auralide;
     if (document === null || locked.current || bridge === undefined) return;
+    const replacesDocument = ['openDocument', 'importHtml', 'newDocument'].includes(operation);
+    pendingFileOperation.current = operation;
     if (drafts.current.size && !confirmed) {
-      showModal(operation === 'saveDocument' ? 'save-drafts' : 'open-drafts');
+      showModal(replacesDocument ? 'open-drafts' : 'save-drafts');
       return;
     }
     pendingFocus.current = modal
@@ -289,11 +300,11 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
     closeModal();
     locked.current = true;
     setBusy(true);
-    setMessage(operation === 'saveDocument' ? '正在保存…' : '正在打开…');
+    setMessage('正在' + fileLabels[operation] + '…');
     try {
       await bridge.auraSetBounds({ x: 0, y: 0, width: 0, height: 0, visible: false });
       let current = document;
-      if (operation === 'saveDocument') {
+      if (!replacesDocument) {
         for (const [id, value] of drafts.current) {
           const owner = current.slides.find((item) =>
             item.elements.some((element) => element.id === id),
@@ -317,14 +328,16 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
       }
       const result = await bridge[operation]({ expectedRevision: current.revision });
       if (result.ok) {
-        if (operation === 'openDocument') drafts.current.clear();
+        if (replacesDocument) drafts.current.clear();
         adopt(
           result.value.document,
-          operation === 'openDocument' ? '' : undefined,
-          operation === 'openDocument' ? '' : undefined,
+          replacesDocument ? '' : undefined,
+          replacesDocument ? '' : undefined,
         );
         setMessage(
-          (operation === 'saveDocument' ? '已保存 · ' : '已打开 · ') +
+          '已' +
+            fileLabels[operation] +
+            ' · ' +
             result.value.fileName +
             (result.value.backupCreated ? ' · 已保留恢复备份' : '') +
             (result.value.historyReset ? ' · 会话历史已重置' : ''),
@@ -335,6 +348,8 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
           'file-changed': '文件已在外部修改，保存已拒绝。未保存内容已保留',
           'stale-revision': '文档版本已更新，操作已拒绝。未保存输入已保留',
           'access-denied': '无法写入文件，未保存内容已保留',
+          'invalid-input': result.error.message,
+          'invalid-document': '无法安全读取此文档，当前内容已保留',
           'invalid-json': '文件格式无效，当前文档已保留',
         };
         setMessage(messages[result.error.code] ?? '文件操作失败，当前文档和输入已保留');
@@ -456,7 +471,10 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
     void window.auralide
       ?.auraSetBounds({ x: 0, y: 0, width: 0, height: 0, visible: false })
       .then(() => {
-        if (!cancelled && !dialogRef.current?.open) dialogRef.current?.showModal();
+        if (cancelled) return;
+        if (!dialogRef.current?.open) dialogRef.current?.showModal();
+        if (modal !== 'menu')
+          dialogRef.current?.querySelector<HTMLButtonElement>('.dialog-actions button')?.focus();
       });
     return () => {
       cancelled = true;
@@ -468,9 +486,17 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
     };
     const keys = (event: KeyboardEvent): void => {
       if (modal || busy || globalThis.document.activeElement?.tagName === 'IFRAME') return;
-      if ((event.ctrlKey || event.metaKey) && ['s', 'o'].includes(event.key.toLowerCase())) {
+      if ((event.ctrlKey || event.metaKey) && ['s', 'o', 'n'].includes(event.key.toLowerCase())) {
         event.preventDefault();
-        void fileAction(event.key.toLowerCase() === 's' ? 'saveDocument' : 'openDocument');
+        void fileAction(
+          event.key.toLowerCase() === 's'
+            ? event.shiftKey
+              ? 'saveDocumentAs'
+              : 'saveDocument'
+            : event.key.toLowerCase() === 'n'
+              ? 'newDocument'
+              : 'openDocument',
+        );
         return;
       }
       const target = event.target as HTMLElement;
@@ -1102,19 +1128,41 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
             : modal === 'save-drafts'
               ? '还有未应用的文本输入'
               : modal === 'open-drafts'
-                ? '保留当前输入，还是打开文件？'
+                ? '保留当前输入，还是继续？'
                 : '删除当前幻灯片？'}
         </h2>
         {modal === 'menu' ? (
           <div className="menu-list">
-            <button disabled={busy} onClick={() => void fileAction('openDocument')}>
-              <Icon name="folder" />
-              打开本地文件<span>Ctrl / Cmd + O</span>
-            </button>
-            <button disabled={busy} onClick={() => void fileAction('saveDocument')}>
-              <Icon name="save" />
-              保存本地文件<span>Ctrl / Cmd + S</span>
-            </button>
+            {(
+              [
+                'newDocument',
+                'openDocument',
+                'saveDocument',
+                'saveDocumentAs',
+                'importHtml',
+                'exportHtml',
+              ] as const
+            ).map((operation) => (
+              <button key={operation} disabled={busy} onClick={() => void fileAction(operation)}>
+                <Icon
+                  name={
+                    operation === 'openDocument' || operation === 'importHtml' ? 'folder' : 'save'
+                  }
+                />
+                {fileLabels[operation]}
+                <span>
+                  {operation === 'newDocument'
+                    ? 'Ctrl / Cmd + N'
+                    : operation === 'openDocument'
+                      ? 'Ctrl / Cmd + O'
+                      : operation === 'saveDocument'
+                        ? 'Ctrl / Cmd + S'
+                        : operation === 'saveDocumentAs'
+                          ? 'Ctrl / Cmd + Shift + S'
+                          : '单文件多页演示文稿'}
+                </span>
+              </button>
+            ))}
             <p className="property-note">
               方向键移动 1 px；Shift + 方向键移动 10 px。输入框保留原生编辑快捷键。
             </p>
@@ -1122,21 +1170,27 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
         ) : (
           <p>
             {modal === 'save-drafts'
-              ? '应用所有待提交文本后保存到磁盘。保存取消或失败时，已应用的修改仍保留在当前文档中。'
+              ? '应用所有待提交文本后继续。文件操作取消或失败时，已应用的修改仍保留在当前文档中。'
               : modal === 'open-drafts'
-                ? '只有成功打开文件后才清除当前输入。取消文件选择会完整保留草稿。'
+                ? '只有成功新建或打开文档后才清除当前输入。取消操作会完整保留草稿。'
                 : '本轮暂不支持从界面撤销此操作。其他幻灯片会保留。'}
           </p>
         )}
         <div className="dialog-actions">
           <button onClick={closeModal}>取消</button>
           {modal === 'save-drafts' ? (
-            <button className="primary" onClick={() => void fileAction('saveDocument', true)}>
-              应用文本并保存
+            <button
+              className="primary"
+              onClick={() => void fileAction(pendingFileOperation.current, true)}
+            >
+              应用文本并继续
             </button>
           ) : modal === 'open-drafts' ? (
-            <button className="primary" onClick={() => void fileAction('openDocument', true)}>
-              继续选择文件
+            <button
+              className="primary"
+              onClick={() => void fileAction(pendingFileOperation.current, true)}
+            >
+              继续操作
             </button>
           ) : modal === 'delete-slide' ? (
             <button

@@ -15,7 +15,10 @@ import {
   isDocumentFileOperationPending,
   openDocumentFile,
   saveDocumentFile,
+  newDocumentFile,
+  exportHtmlFile,
 } from './document-session.js';
+import { inspectHtmlFile, retainHtmlSource } from './html-import.js';
 import { applicationMenuTemplate } from './platform.js';
 import { BrowserController } from '../aura/browser-controller.js';
 import { isTrustedRendererUrl, validateDevServerUrl } from './security.js';
@@ -254,44 +257,88 @@ if (!app.requestSingleInstanceLock()) {
     handle(IPC.ping, z.tuple([z.unknown()]), ([payload]) => handlePing(payload));
     handle(IPC.getDocument, z.tuple([]), () => getDocument());
     handle(IPC.getDocumentStatus, z.tuple([]), () => getDocumentStatus());
-    handle(IPC.saveDocument, z.tuple([z.unknown()]), ([request]) =>
-      saveDocumentFile(request, async () => {
-        if (mainWindow === null) return null;
-        const result = await dialog.showSaveDialog(mainWindow, {
-          title: 'Save Auralide document',
-          defaultPath: 'presentation.auralide.json',
-          filters: [{ name: 'Auralide document', extensions: ['json'] }],
-          properties: ['showOverwriteConfirmation'],
-        });
-        return result.canceled ? null : (result.filePath ?? null);
-      }),
+    const chooseSave = async (htmlOnly = false): Promise<string | null> => {
+      if (mainWindow === null) return null;
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: htmlOnly ? '导出 HTML 演示文稿' : '保存演示文稿',
+        defaultPath: htmlOnly ? 'presentation.html' : 'presentation.auralide.json',
+        filters: htmlOnly
+          ? [{ name: 'HTML 演示文稿', extensions: ['html', 'htm'] }]
+          : [
+              { name: 'Auralide 文档', extensions: ['json'] },
+              { name: 'HTML 演示文稿', extensions: ['html', 'htm'] },
+            ],
+        properties: ['showOverwriteConfirmation'],
+      });
+      return result.canceled ? null : (result.filePath ?? null);
+    };
+    const confirmDiscard = async (): Promise<boolean> => {
+      if (mainWindow === null) return false;
+      const result = await dialog.showMessageBox(mainWindow, {
+        type: 'warning',
+        message: '当前文档有未保存的修改，是否放弃并继续？',
+        buttons: ['取消', '放弃修改并继续'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      });
+      return result.response === 1;
+    };
+    for (const [channel, saveAs] of [
+      [IPC.saveDocument, false],
+      [IPC.saveDocumentAs, true],
+    ] as const)
+      handle(channel, z.tuple([z.unknown()]), ([request]) =>
+        saveDocumentFile(request, () => chooseSave(), saveAs),
+      );
+    handle(IPC.newDocument, z.tuple([z.unknown()]), ([request]) =>
+      newDocumentFile(request, confirmDiscard),
     );
-    handle(IPC.openDocument, z.tuple([z.unknown()]), ([request]) =>
-      openDocumentFile(
-        request,
-        async () => {
-          if (mainWindow === null) return null;
-          const result = await dialog.showOpenDialog(mainWindow, {
-            title: 'Open Auralide document',
-            filters: [{ name: 'Auralide document', extensions: ['json'] }],
-            properties: ['openFile'],
-          });
-          return result.canceled ? null : (result.filePaths[0] ?? null);
-        },
-        async () => {
-          if (mainWindow === null) return false;
-          const result = await dialog.showMessageBox(mainWindow, {
-            type: 'warning',
-            message: 'Discard unsaved changes and open this document?',
-            buttons: ['Cancel', 'Discard and open'],
-            defaultId: 0,
-            cancelId: 0,
-            noLink: true,
-          });
-          return result.response === 1;
-        },
-      ),
+    handle(IPC.exportHtml, z.tuple([z.unknown()]), ([request]) =>
+      exportHtmlFile(request, () => chooseSave(true)),
     );
+    for (const [channel, htmlOnly] of [
+      [IPC.openDocument, false],
+      [IPC.importHtml, true],
+    ] as const)
+      handle(channel, z.tuple([z.unknown()]), ([request]) =>
+        openDocumentFile(
+          request,
+          async () => {
+            if (mainWindow === null) return null;
+            const result = await dialog.showOpenDialog(mainWindow, {
+              title: htmlOnly ? '导入 HTML 演示文稿' : '打开演示文稿',
+              filters: htmlOnly
+                ? [{ name: 'HTML 演示文稿', extensions: ['html', 'htm'] }]
+                : [
+                    { name: '演示文稿（Auralide / HTML）', extensions: ['json', 'html', 'htm'] },
+                    { name: 'Auralide 文档', extensions: ['json'] },
+                    { name: 'HTML 演示文稿', extensions: ['html', 'htm'] },
+                  ],
+              properties: ['openFile'],
+            });
+            return result.canceled ? null : (result.filePaths[0] ?? null);
+          },
+          confirmDiscard,
+          {
+            inspect: inspectHtmlFile,
+            retain: retainHtmlSource,
+            confirm: async (report) => {
+              if (mainWindow === null) return false;
+              const result = await dialog.showMessageBox(mainWindow, {
+                type: 'warning',
+                message: `将 HTML 转换为 ${report.slideCount} 页、${report.elementCount} 个可编辑对象`,
+                detail: report.warnings.join('\n') + '\n原文件将保留；转换结果需要另行保存。',
+                buttons: ['取消', '接受转换并导入'],
+                defaultId: 0,
+                cancelId: 0,
+                noLink: true,
+              });
+              return result.response === 1;
+            },
+          },
+        ),
+      );
     handle(IPC.applyCommand, z.tuple([z.unknown()]), ([command]) =>
       dispatchDocumentCommand(command),
     );
