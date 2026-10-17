@@ -48,6 +48,7 @@
     "keyboard nudge preserves layer focus",
     "repeated keyboard nudge uses actual Core geometry",
     "pointer drag commits document-space coordinates through Core",
+    "moving a back layer preserves the visible front circle",
     "cancel slide deletion retains real slide",
     "confirmed slide deletion uses Core",
     "native guest hidden before shell modal",

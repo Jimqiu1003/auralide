@@ -320,7 +320,36 @@ try {
     draggedX,
   );
   await page.getByRole('button', { name: '排列', exact: true }).click();
-  await page.screenshot({ path: join(artifacts, 'a2-light-1440x900-shape.png') });
+  await page.waitForFunction(
+    () =>
+      document.querySelector('[data-testid="demo-workspace"]')?.getAttribute('aria-busy') ===
+      'false',
+  );
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+      ),
+  );
+  const frame = await page.getByTestId('slide-preview').boundingBox();
+  const shapePng = await page.screenshot({
+    path: join(artifacts, 'a2-light-1440x900-shape.png'),
+    scale: 'css',
+  });
+  const circleColor = await app.evaluate(
+    ({ nativeImage }, input) => {
+      const image = nativeImage.createFromBuffer(Buffer.from(input.png, 'base64'));
+      const bytes = image.toBitmap();
+      const offset = (Math.round(input.y) * image.getSize().width + Math.round(input.x)) * 4;
+      return [bytes[offset + 2], bytes[offset + 1], bytes[offset]];
+    },
+    {
+      png: shapePng.toString('base64'),
+      x: frame.x + (1058 * frame.width) / 1280,
+      y: frame.y + (208 * frame.height) / 720,
+    },
+  );
+  check('moving a back layer preserves the visible front circle', circleColor, [241, 198, 167]);
   const slideCount = (await documentValue()).slides.length;
   await page.getByTestId('demo-add-slide').click();
   await page.waitForFunction(

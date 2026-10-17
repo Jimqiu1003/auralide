@@ -1,6 +1,6 @@
 # Desktop Demo 0.2A — A2 正式 Shell 集成
 
-日期：2026-10-17。分支：`feat/demo-v02-shell`。状态：Windows 本地门禁通过，远端双平台 CI 待本分支提交后执行；仍为 Draft，不自动合并。
+日期：2026-10-17。分支：`feat/demo-v02-shell`。状态：正式代码 `40040f1` 已通过 Windows x64 与原生 macOS ARM64 CI；本地补强绘制检查后 49 项通过。仍为 Draft，不自动合并。
 
 ## 基线与边界
 
@@ -78,7 +78,7 @@ Dispatcher。文件打开仅成功后才清草稿。原生关闭保护已应用�
 - `pnpm verify`：PASS，format/lint/typecheck/unit tests/build；未改包的 Turbo 结果可能命中缓存。
 - Electron production + development smoke：167/167 PASS，保留原有 IPC、CSP、隔离、guest 生命周期拒绝路径。
 - Persistence Electron：22/22 PASS，真实磁盘、恢复备份、关闭/重启/重开及 HTML guest。
-- A2 正式 Shell Electron：48/48 PASS，2 尺寸 × Light/Dark，System 跟随；保存取消、实际文件系统失败、精确外部字节冲突保护、草稿跨 Aura、原生模态覆盖和 Escape、键盘焦点及真实进程重启。
+- A2 正式 Shell Electron：49/49 PASS（本地最新专项），2 尺寸 × Light/Dark，System 跟随；保存取消、实际文件系统失败、精确外部字节冲突保护、草稿跨 Aura、原生模态覆盖和 Escape、键盘焦点及真实进程重启。
 - [机器记录](demo-v02-shell-evidence/shell.json)。运行方式：`node apps/desktop/test/shell.electron.mjs`。
 - 三个无障碍专项静态检查：修复焦点恢复、可见标题的可访问名称、输入说明关联和选中标记。正文/次级文字最小对比度分别 Light 12.37/4.64、Dark 8.57/4.64；焦点最小 5.35/6.20。任意文稿色不计为 Shell 对比度保证。专项报告器 schema 不存在，采用回退 JSON；不宣称屏幕阅读器验收。
 
@@ -86,7 +86,7 @@ Dispatcher。文件打开仅成功后才清草稿。原生关闭保护已应用�
 
 ## 后续限制
 
-macOS ARM64 新提交 CI 尚待执行并回填；本机无法人工验证 macOS 原生键盘/对话框。
+macOS ARM64 已完成原生 CI；本机无法进行 macOS 人工原生验收。
 屏幕阅读器、混合/物理 DPI 和强制颜色模式未验证。HTML guest 与编辑 SVG 的默认字形、形状描边仍沿用各自既有 renderer 行为；不把 Shell 交付等同完整 WYSIWYG 一致性验收。
 生产 Undo/Redo、样式、对象缩放及 Agent 授权仍是后续阶段，不在本轮伪造实现。
 
@@ -106,3 +106,24 @@ React Doctor 82/100：无 error；两个旧 Aura POC 警告、output 的冗余 r
 本轮不为评分重写命令与文件会话；组件后续可按面板抽取，属于已记录维护成本。未向项目安装 Doctor 依赖。
 
 Windows 整窗 Computer Use 工具授权超时，未获得其截图；报告保留明确分开的真实 shell 与 guest PNG，未合成或冒充原生整窗。
+
+## 双平台核验完成
+
+[CI 39012802946](https://github.com/Jimqiu1003/auralide/actions/runs/39012802946) 在正式代码
+`40040f133773317168c2d0b21f53dd15474efd83` 上完成：两平台 Verify、安全 smoke 167/167、
+持久化 22/22、A2 专项 48/48 均 PASS，aggregate verify 通过。
+追加真实画面前景像素检查后，本地专项为 49/49；[PR #28 Checks](https://github.com/Jimqiu1003/auralide/pull/28/checks)
+提供最新提交的复跑状态。没有用旧 PR 的 CI 代替本次运行。
+
+macOS 实际证据：[平台 JSON](demo-v02-shell-evidence/macos-platform.json)、
+[专项记录](demo-v02-shell-evidence/macos-shell.json)。Node v24.20.0 / Electron 44.7.2 均 darwin/arm64，
+uname arm64、arm64Hardware=1、translated=0。原生 runner 的显示器 1024×768 / workArea 1024×684，
+使用前述 QA 大窗口参数完成真实目标内容尺寸，不等同物理大屏人工验收。
+
+![macOS ARM64 / 1280×800 / Light](demo-v02-shell-evidence/macos-a2-light-1280x800-editor.png)
+
+![macOS ARM64 / 1440×900 / Dark](demo-v02-shell-evidence/macos-a2-dark-1440x900-editor.png)
+
+逐图复查发现一张刚完成拖动的 macOS 截图缺少前景圆形；Core 与 DOM 图层顺序未改变，
+本地稳定帧复现保留圆形。专项现等待 UI 脱离 busy 并经过两个绘制帧，采样圆心实际像素
+`#f1c6a7` 后才接受移动后的截图。此检查独立于文档几何断言，防止把数据正确当作视觉正确。
