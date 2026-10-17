@@ -22,6 +22,7 @@ const api: AuralideApi = Object.freeze({
   getRuntimeInfo: (): Promise<RuntimeInfo> => ipcRenderer.invoke(IPC.runtimeInfo),
   ping: (request: PingRequest): Promise<PingResponse> => ipcRenderer.invoke(IPC.ping, request),
   getDocument: (): Promise<Presentation> => ipcRenderer.invoke(IPC.getDocument),
+  getDocumentStatus: () => ipcRenderer.invoke(IPC.getDocumentStatus),
   saveDocument: (request: Parameters<AuralideApi['saveDocument']>[0]) =>
     ipcRenderer.invoke(IPC.saveDocument, request),
   openDocument: (request: Parameters<AuralideApi['openDocument']>[0]) =>

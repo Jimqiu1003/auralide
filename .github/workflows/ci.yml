@@ -62,6 +62,9 @@ jobs:
       - name: Durable document save, restart, reopen and preview
         run: node apps/desktop/test/persistence.electron.mjs
 
+      - name: A2 formal shell interaction, visual and native preview acceptance
+        run: node apps/desktop/test/shell.electron.mjs
+
       - name: Upload platform evidence and screenshots
         if: always()
         uses: actions/upload-artifact@v7

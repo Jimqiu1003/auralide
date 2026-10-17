@@ -12,6 +12,7 @@ import { basename } from 'node:path';
 import { z } from 'zod';
 
 import type { FileOutcome, FileResult } from '../shared/document-files.js';
+import type { DocumentStatus } from '../shared/api.js';
 import {
   DocumentFileError,
   documentFileStamp,
@@ -68,6 +69,11 @@ export const dispatchDocumentCommand = (command: unknown): Result<Presentation, 
 };
 
 export const hasUnsavedChanges = (): boolean => state.document !== savedDocument;
+export const getDocumentStatus = (): DocumentStatus => ({
+  revision: state.document.revision,
+  dirty: hasUnsavedChanges(),
+  fileName: fileBinding === null ? null : basename(fileBinding.path),
+});
 export const isDocumentFileOperationPending = (): boolean => fileOperation;
 const runFileOperation = async (
   input: unknown,

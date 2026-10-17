@@ -10,6 +10,7 @@ import { describeIssues, pingRequestSchema } from '../shared/schemas.js';
 import {
   dispatchDocumentCommand,
   getDocument,
+  getDocumentStatus,
   hasUnsavedChanges,
   isDocumentFileOperationPending,
   openDocumentFile,
@@ -152,6 +153,8 @@ const createWindow = (): BrowserWindow => {
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
+    minWidth: 1080,
+    minHeight: 700,
     show: false,
     backgroundColor: '#101014',
     webPreferences: {
@@ -167,6 +170,17 @@ const createWindow = (): BrowserWindow => {
   });
 
   guardContents(window.webContents);
+  window.webContents.on('will-prevent-unload', (event) => {
+    const answer = dialog.showMessageBoxSync(window, {
+      type: 'warning',
+      message: '仍有未应用的文本输入。放弃输入并关闭？',
+      buttons: ['取消', '放弃输入并关闭'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    if (answer === 1) event.preventDefault();
+  });
   aura = new BrowserController(window, getDocument);
   window.on('close', (event) => {
     if (isDocumentFileOperationPending()) {
@@ -237,6 +251,7 @@ if (!app.requestSingleInstanceLock()) {
     handle(IPC.runtimeInfo, z.tuple([]), () => runtimeInfo());
     handle(IPC.ping, z.tuple([z.unknown()]), ([payload]) => handlePing(payload));
     handle(IPC.getDocument, z.tuple([]), () => getDocument());
+    handle(IPC.getDocumentStatus, z.tuple([]), () => getDocumentStatus());
     handle(IPC.saveDocument, z.tuple([z.unknown()]), ([request]) =>
       saveDocumentFile(request, async () => {
         if (mainWindow === null) return null;

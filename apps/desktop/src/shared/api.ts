@@ -12,6 +12,12 @@ import type { FileResult } from './document-files.js';
 /** How the window was loaded. The two paths differ only in this. */
 export type LoadPath = 'development' | 'production';
 
+export interface DocumentStatus {
+  readonly revision: number;
+  readonly dirty: boolean;
+  readonly fileName: string | null;
+}
+
 /** Runtime facts the main process is willing to disclose to the renderer. */
 export type RuntimeInfo = {
   readonly appName: string;
@@ -48,6 +54,7 @@ export type AuralideApi = {
   readonly getRuntimeInfo: () => Promise<RuntimeInfo>;
   readonly ping: (request: PingRequest) => Promise<PingResponse>;
   readonly getDocument: () => Promise<Presentation>;
+  readonly getDocumentStatus: () => Promise<DocumentStatus>;
   readonly applyCommand: (command: CommandEnvelope) => Promise<Result<Presentation, CommandError>>;
   readonly saveDocument: (request: { expectedRevision: number }) => Promise<FileResult>;
   readonly openDocument: (request: { expectedRevision: number }) => Promise<FileResult>;

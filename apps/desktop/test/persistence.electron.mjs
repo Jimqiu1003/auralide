@@ -44,9 +44,7 @@ const edit = async (page, text) => {
   await page.getByTestId('document-text-input').fill(text);
   await page.getByTestId('document-apply').click();
   await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="document-status"]')?.textContent ===
-      'Text updated through Core.',
+    () => document.querySelector('[data-testid="document-status"]')?.textContent === '文本已更新',
   );
 };
 const closeSavedWindow = async (page) => {
@@ -64,7 +62,7 @@ try {
   await edit(page, 'P2A saved once');
   await page.getByTestId('document-save').click();
   await page.waitForFunction(() =>
-    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('Saved '),
+    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('已保存 · '),
   );
   check(
     'first save persists Core edit',
@@ -77,7 +75,7 @@ try {
   await page.waitForFunction(() =>
     document
       .querySelector('[data-testid="document-status"]')
-      ?.textContent?.includes('recovery backup'),
+      ?.textContent?.includes('已保留恢复备份'),
   );
   const backup = (await readdir(directory)).find((name) => name.endsWith('.bak'));
   check(
@@ -111,7 +109,7 @@ try {
   await edit(page, 'Unsaved value');
   await page.getByTestId('document-open').click();
   await page.waitForFunction(() =>
-    document.querySelector('[data-testid="document-status"]')?.textContent?.includes('cancelled'),
+    document.querySelector('[data-testid="document-status"]')?.textContent?.includes('已取消'),
   );
   check(
     'declining discard retains current content',
@@ -123,7 +121,7 @@ try {
   });
   await page.getByTestId('document-open').click();
   await page.waitForFunction(() =>
-    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('Opened '),
+    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('已打开 · '),
   );
   check(
     'reopen fences previous revision',
@@ -146,7 +144,7 @@ try {
   );
   await page.getByTestId('document-open').click();
   await page.waitForFunction(() =>
-    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('Opened '),
+    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('已打开 · '),
   );
   check(
     'reopen after restart restores text',
@@ -158,11 +156,15 @@ try {
     Number(await page.getByTestId('document-revision').textContent()),
     3,
   );
-  await page.getByTestId('aura-render').click();
-  await page.waitForFunction(() =>
-    document.querySelector('[data-testid="aura-result"]')?.textContent?.includes('"slide-preview"'),
+  await page.locator('[data-workspace="aura"]').click();
+  await page.waitForFunction(async () => {
+    const result = await window.auralide.auraInvoke({ tool: 'browser.listTabs', input: {} });
+    return result.ok && result.value.some((item) => item.mode === 'slide-preview');
+  });
+  const tabs = await page.evaluate(() =>
+    window.auralide.auraInvoke({ tool: 'browser.listTabs', input: {} }),
   );
-  const tab = JSON.parse(await page.getByTestId('aura-result').textContent()).value;
+  const tab = tabs.value.find((item) => item.mode === 'slide-preview');
   const inspected = await page.evaluate(
     (tab) =>
       window.auralide.auraInvoke({
@@ -176,10 +178,6 @@ try {
     inspected.value?.text,
     'P2A survives application restart',
   );
-  // Preview is in its own section below the canvas-first editor. Center the native guest.
-  await page.getByTestId('aura-surface').evaluate((element) => {
-    element.scrollIntoView({ block: 'center', inline: 'nearest' });
-  });
   await page.waitForFunction(async (tab) => {
     const result = await window.auralide.auraInvoke({
       tool: 'preview.getDiagnostics',
@@ -215,6 +213,7 @@ try {
     await page.evaluate(() => window.auralide.getDocument()),
     before,
   );
+  await page.locator('[data-workspace="editor"]').click();
   await edit(page, 'Keep this unsaved edit');
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
   check('cancel close retains window', page.isClosed(), false);
