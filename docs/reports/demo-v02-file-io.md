@@ -37,7 +37,7 @@ Executed locally on Windows x64:
 | Production/development Electron smoke | 167/167 PASS                                            |
 | Existing durable-file suite           | 22/22 PASS                                              |
 | Existing A2 shell suite               | 49/49 PASS                                              |
-| New real Electron file suite          | 40/40 PASS                                              |
+| New real Electron file suite          | 41/41 PASS                                              |
 
 The new suite uses isolated profiles and temporary documents, with only native user choices stubbed.
 It covers multi-page HTML, loss refusal, script/Node/bridge isolation, provenance, Core editing,
@@ -57,7 +57,7 @@ Aura separately. The imported fixture is intentionally sparse to expose text/sha
 
 Failures repaired: TypeScript branded IDs and Electron event overloads; an unsafe modal-content focus
 gap identified by keyboard review; old test button locators after confirmation wording changed;
-a negative test that incorrectly treated inert script source text as executed DOM mutation. Each
+a negative test that incorrectly treated inert script source text as executed DOM mutation. First macOS captures also showed an earlier draft-state frame after refresh; the file suite now waits for the reopened revision, asserts Escape cleared the current draft, and captures after two paint frames. Each
 affected flow was rerun successfully. The keyboard reviewer performed static review; the new suite
 then verified actual cancel focus and Escape restoration.
 
@@ -87,3 +87,17 @@ opens directly in a browser and supports previous/next and arrow-key navigation.
 
 The next vertical slice should add common editing and basic presentation through the same validated
 Core path, followed by a versioned extension contract and one bundled adapter. A2 remains the default.
+
+## First native platform run and review
+
+[CI 39014727668](https://github.com/Jimqiu1003/auralide/actions/runs/39014727668) validates production
+commit `915b30e`: Windows x64 and native macOS ARM64 both completed Verify, smoke 167, persistence 22,
+A2 shell 49 and file checks 40. Artifact identity reports Node v24.20.0, Electron 44.7.2, uname arm64,
+arm64Hardware=1 and translated=0. The display uses the existing QA-only oversized-window switch;
+this is not a physical large-monitor or packaged-macOS acceptance claim.
+
+A follow-up only strengthens file-suite refresh/paint synchronization and adds the 41st Escape/draft
+assertion; no production code changed after `915b30e`. Local React Doctor 0.9.18 changed-scope check
+reports 85/100 with no new findings; no project dependency was installed. The current Draft PR checks
+provide the exact-head follow-up run. The live Windows review window uses an isolated profile and
+an example copy; normal native file dialogs have been restored.

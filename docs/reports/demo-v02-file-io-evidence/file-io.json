@@ -36,6 +36,7 @@
     "draft prompt has safe initial keyboard focus",
     "draft prompt Escape restores file trigger",
     "cancelled draft prompt preserves text",
+    "Escape clears only the current text draft",
     "no app scroll 1280x800",
     "no app scroll 1440x900",
     "reopened document reaches native Aura preview",

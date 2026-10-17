@@ -245,6 +245,14 @@ try {
     false,
   );
   await page.getByRole('button', { name: '读取最新', exact: true }).click();
+  await page.waitForFunction(
+    (revision) =>
+      document.querySelector('[data-testid="document-revision"]')?.textContent ===
+        String(revision) &&
+      document.querySelector('[data-testid="demo-workspace"]')?.getAttribute('aria-busy') ===
+        'false',
+    reopened.value.document.revision,
+  );
   await page.getByTestId('document-text-input').fill('未应用的草稿');
   await page.getByRole('button', { name: '文件', exact: true }).click();
   await page.getByRole('button', { name: /另存为/ }).click();
@@ -268,6 +276,14 @@ try {
     '未应用的草稿',
   );
   await page.getByTestId('document-text-input').press('Escape');
+  await page.waitForFunction(
+    () => document.querySelector('[data-testid="save-state"]')?.textContent === '已保存',
+  );
+  check(
+    'Escape clears only the current text draft',
+    await page.getByTestId('document-text-input').inputValue(),
+    'HTML 后续保存',
+  );
   await page.getByRole('button', { name: '文件', exact: true }).click();
   await app.evaluate(({ BrowserWindow }) =>
     BrowserWindow.getAllWindows()[0].setContentSize(1280, 800),
@@ -294,6 +310,12 @@ try {
           document.documentElement.scrollWidth <= window.innerWidth &&
           document.documentElement.scrollHeight <= window.innerHeight,
       ),
+    );
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          window.requestAnimationFrame(() => window.requestAnimationFrame(resolve)),
+        ),
     );
     await page.screenshot({ path: join(artifacts, `html-import-${width}x${height}.png`) });
   }
