@@ -2,6 +2,17 @@
   "passed": true,
   "platform": "win32",
   "arch": "x64",
+  "display": {
+    "size": {
+      "width": 1920,
+      "height": 1080
+    },
+    "workAreaSize": {
+      "width": 1920,
+      "height": 1032
+    },
+    "scaleFactor": 1
+  },
   "checks": [
     "normal shell has no developer probes or iframe",
     "applying text returns keyboard focus to the editor",
@@ -36,6 +47,9 @@
     "keyboard SVG selection matches layer selection",
     "keyboard nudge preserves layer focus",
     "repeated keyboard nudge uses actual Core geometry",
+    "pointer drag commits document-space coordinates through Core",
+    "cancel slide deletion retains real slide",
+    "confirmed slide deletion uses Core",
     "native guest hidden before shell modal",
     "modal Escape restores file trigger focus",
     "native guest Escape returns host focus",

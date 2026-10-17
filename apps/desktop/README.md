@@ -48,8 +48,8 @@ node test/smoke.electron.mjs dev               # dev only
 ```
 
 Security smoke explicitly loads `#diagnostics`; ordinary launches never show those probes.
-The file menu exposes the diagnostic route for deliberate development use. To return, remove the
-fragment and reload. It launches a **real window** (Playwright's Electron driver), asserts the renderer, the frozen
+The diagnostic fragment is not linked from ordinary product menus. Developers may deliberately load
+that entry fragment; remove it and reload to return. It launches a **real window** (Playwright's Electron driver), asserts the renderer, the frozen
 preload surface, the allow-listed ping, the refusal path, the console for CSP violations, and the
 per-mode policy; then writes `test-artifacts/<mode>.png` (screenshot) and `test-artifacts/<mode>.json`
 (machine-readable evidence: checks, console log, main-process startup line). It needs a desktop
@@ -101,3 +101,8 @@ view before opening. There is no production iframe. See [Aura architecture](../.
 
 CDP renderer screenshots exclude sibling native views: the shell suite records shell and actual
 guest PNGs separately. They are labeled separately rather than passed off as a complete native capture.
+
+The unpackaged-only `--auralide-visual-test` argument permits oversized native windows on macOS CI's
+small virtual display for the exact 1280×800 / 1440×900 content-size checks. Ordinary launches retain
+the OS sizing policy; this does not grant any renderer or guest capabilities. Screen/work-area/scale
+metadata is recorded beside the shell results. These captures do not prove physical monitor fit.

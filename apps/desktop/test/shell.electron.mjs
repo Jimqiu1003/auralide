@@ -21,6 +21,7 @@ await writeFile(
 );
 const checks = [];
 const errors = [];
+let display;
 let app;
 let page;
 const check = (name, actual, expected = true) => {
@@ -37,11 +38,15 @@ const status = async (text) =>
 const documentValue = () => page.evaluate(() => window.auralide.getDocument());
 const launch = async () => {
   app = await _electron.launch({
-    args: ['.', '--user-data-dir=' + join(directory, 'profile')],
+    args: ['.', '--auralide-visual-test', '--user-data-dir=' + join(directory, 'profile')],
     cwd: root,
     env,
   });
   page = await app.firstWindow();
+  display = await app.evaluate(({ screen }) => {
+    const { size, workAreaSize, scaleFactor } = screen.getPrimaryDisplay();
+    return { size, workAreaSize, scaleFactor };
+  });
   page.on('pageerror', (error) => errors.push(String(error)));
   await page.getByTestId('document-text-input').waitFor();
   await page.waitForFunction(
@@ -160,6 +165,10 @@ try {
   ]) {
     await app.evaluate(
       ({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(...size),
+      [width, height],
+    );
+    await page.waitForFunction(
+      ([width, height]) => window.innerWidth === width && window.innerHeight === height,
       [width, height],
     );
     for (const theme of ['light', 'dark']) {
@@ -290,8 +299,50 @@ try {
       .geometry.x,
     927,
   );
+  const shapeBox = await page.locator('[data-element-id="el_cover_orange"]').boundingBox();
+  const canvasBox = await page.getByTestId('slide-preview').boundingBox();
+  await page.mouse.move(shapeBox.x + 16, shapeBox.y + 16);
+  await page.mouse.down();
+  await page.mouse.move(shapeBox.x + 36, shapeBox.y + 16);
+  await page.mouse.up();
+  const draggedX = Math.round(927 + 20 / (canvasBox.width / 1280));
+  await page.waitForFunction(
+    async (x) =>
+      (await window.auralide.getDocument()).slides[0].elements.find(
+        (item) => item.id === 'el_cover_orange',
+      ).geometry.x === x,
+    draggedX,
+  );
+  check(
+    'pointer drag commits document-space coordinates through Core',
+    (await documentValue()).slides[0].elements.find((item) => item.id === 'el_cover_orange')
+      .geometry.x,
+    draggedX,
+  );
   await page.getByRole('button', { name: '排列', exact: true }).click();
   await page.screenshot({ path: join(artifacts, 'a2-light-1440x900-shape.png') });
+  const slideCount = (await documentValue()).slides.length;
+  await page.getByTestId('demo-add-slide').click();
+  await page.waitForFunction(
+    async (count) => (await window.auralide.getDocument()).slides.length === count,
+    slideCount + 1,
+  );
+  await page.getByTestId('demo-delete-slide').click();
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+  check(
+    'cancel slide deletion retains real slide',
+    (await documentValue()).slides.length,
+    slideCount + 1,
+  );
+  await page.getByTestId('demo-delete-slide').click();
+  await page.getByRole('button', { name: '确认删除', exact: true }).click();
+  await page.waitForFunction(
+    async (count) => (await window.auralide.getDocument()).slides.length === count,
+    slideCount,
+  );
+  check('confirmed slide deletion uses Core', (await documentValue()).slides.length, slideCount);
+  await page.getByRole('button', { name: '格式', exact: true }).click();
+  await page.getByTestId('demo-layer-item').filter({ hasText: '主标题' }).click();
   await changeWorkspace('aura');
   const tab = await preview();
   await page.getByRole('button', { name: '文件', exact: true }).click();
@@ -409,7 +460,7 @@ try {
   await writeFile(
     join(artifacts, 'shell.json'),
     JSON.stringify(
-      { passed: true, platform: process.platform, arch: process.arch, checks },
+      { passed: true, platform: process.platform, arch: process.arch, display, checks },
       null,
       2,
     ),

@@ -1118,15 +1118,6 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
             <p className="property-note">
               方向键移动 1 px；Shift + 方向键移动 10 px。输入框保留原生编辑快捷键。
             </p>
-            <button
-              onClick={() => {
-                closeModal();
-                window.location.hash = '#diagnostics';
-                window.location.reload();
-              }}
-            >
-              开发者诊断
-            </button>
           </div>
         ) : (
           <p>

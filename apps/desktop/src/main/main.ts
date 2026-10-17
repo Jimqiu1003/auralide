@@ -155,6 +155,8 @@ const createWindow = (): BrowserWindow => {
     height: 800,
     minWidth: 1080,
     minHeight: 700,
+    // CI's macOS work area is smaller than the required visual-review sizes.
+    enableLargerThanScreen: !app.isPackaged && app.commandLine.hasSwitch('auralide-visual-test'),
     show: false,
     backgroundColor: '#101014',
     webPreferences: {
