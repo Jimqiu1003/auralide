@@ -266,7 +266,7 @@ async function runMode(mode) {
     check(
       'bridge-version',
       await page.locator('[data-testid="bridge-version"]').textContent(),
-      '1.4.0',
+      '1.5.0',
     );
 
     // Renderer boundary: nothing but the frozen bridge is reachable.
@@ -287,7 +287,7 @@ async function runMode(mode) {
     check(
       'bridge keys',
       exposed.keys,
-      'applyCommand,auraInvoke,auraSetBounds,bridgeVersion,getDocument,getDocumentStatus,getRuntimeInfo,openDocument,ping,saveDocument',
+      'applyCommand,auraInvoke,auraSetBounds,bridgeVersion,exportHtml,getDocument,getDocumentStatus,getRuntimeInfo,importHtml,newDocument,openDocument,ping,saveDocument,saveDocumentAs',
     );
     checkTruthy('bridge is frozen', exposed.frozen);
 

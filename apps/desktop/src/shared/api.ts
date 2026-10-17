@@ -57,6 +57,10 @@ export type AuralideApi = {
   readonly getDocumentStatus: () => Promise<DocumentStatus>;
   readonly applyCommand: (command: CommandEnvelope) => Promise<Result<Presentation, CommandError>>;
   readonly saveDocument: (request: { expectedRevision: number }) => Promise<FileResult>;
+  readonly newDocument: (request: { expectedRevision: number }) => Promise<FileResult>;
+  readonly saveDocumentAs: (request: { expectedRevision: number }) => Promise<FileResult>;
+  readonly importHtml: (request: { expectedRevision: number }) => Promise<FileResult>;
+  readonly exportHtml: (request: { expectedRevision: number }) => Promise<FileResult>;
   readonly openDocument: (request: { expectedRevision: number }) => Promise<FileResult>;
   readonly auraInvoke: (request: AuraRequest) => Promise<AuraResult>;
   readonly auraSetBounds: (bounds: {
