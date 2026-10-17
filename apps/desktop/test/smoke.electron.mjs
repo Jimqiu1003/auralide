@@ -221,7 +221,12 @@ async function runMode(mode) {
       servedHtml = await waitForDevServer(devServerUrl, devServer);
     }
     const env = { ...process.env, AURALIDE_DEV_SERVER_URL: mode === 'dev' ? devServerUrl : '' };
-    app = await electron.launch({ args: ['.'], cwd: appRoot, env, timeout: 60_000 });
+    app = await electron.launch({
+      args: ['.', '--user-data-dir=' + join(artifacts, 'smoke-profile-' + mode)],
+      cwd: appRoot,
+      env,
+      timeout: 60_000,
+    });
     electronVersion = await app.evaluate(() => process.versions.electron);
     app.process().stdout?.on('data', (chunk) => startupLines.push(String(chunk).trim()));
     const page = await app.firstWindow({ timeout: 60_000 });

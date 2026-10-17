@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 import { _electron } from 'playwright-core';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -25,7 +26,11 @@ const check = (name, actual, expected) => {
   checks.push(name);
 };
 const launch = async () => {
-  app = await _electron.launch({ args: ['.'], cwd: root, env });
+  app = await _electron.launch({
+    args: ['.', '--user-data-dir=' + join(directory, 'profile')],
+    cwd: root,
+    env,
+  });
   const page = await app.firstWindow();
   await page.getByTestId('document-text-input').waitFor();
   await page.waitForFunction(
@@ -185,15 +190,25 @@ try {
     });
     return result.ok && result.value.visible;
   }, tab);
-  const capture = await page.evaluate(
-    (tab) =>
-      window.auralide.auraInvoke({
-        tool: 'preview.screenshot',
-        input: { tabId: tab.id, expectedRevision: tab.revision },
-      }),
-    tab,
+  let capture;
+  // Wait for the native compositor, retaining the actual refusal if it never settles.
+  for (let attempt = 0; attempt < 50; attempt++) {
+    capture = await page.evaluate(
+      (tab) =>
+        window.auralide.auraInvoke({
+          tool: 'preview.screenshot',
+          input: { tabId: tab.id, expectedRevision: tab.revision },
+        }),
+      tab,
+    );
+    if (capture.ok) break;
+    await delay(100);
+  }
+  check(
+    'reopened HTML guest screenshot succeeds: ' + JSON.stringify(capture.error ?? {}),
+    capture.ok,
+    true,
   );
-  check('reopened HTML guest screenshot succeeds', capture.ok, true);
   const png = Buffer.from(capture.value.base64, 'base64');
   check('reopened HTML screenshot is PNG', png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   await writeFile(join(artifacts, 'p2a-html-preview.png'), png);

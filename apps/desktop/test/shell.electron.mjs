@@ -15,6 +15,10 @@ await copyFile(join(root, '../../docs/examples/studio-notes.auralide.json'), sam
 const env = { ...process.env };
 delete env.ELECTRON_RUN_AS_NODE;
 delete env.AURALIDE_DEV_SERVER_URL;
+await writeFile(
+  join(artifacts, 'shell.json'),
+  JSON.stringify({ passed: false, status: 'running' }),
+);
 const checks = [];
 const errors = [];
 let app;
@@ -32,7 +36,11 @@ const status = async (text) =>
   );
 const documentValue = () => page.evaluate(() => window.auralide.getDocument());
 const launch = async () => {
-  app = await _electron.launch({ args: ['.'], cwd: root, env });
+  app = await _electron.launch({
+    args: ['.', '--user-data-dir=' + join(directory, 'profile')],
+    cwd: root,
+    env,
+  });
   page = await app.firstWindow();
   page.on('pageerror', (error) => errors.push(String(error)));
   await page.getByTestId('document-text-input').waitFor();
@@ -197,6 +205,19 @@ try {
       await page.screenshot({
         path: join(artifacts, `a2-${theme}-${width}x${height}-aura-shell.png`),
       });
+      await page.waitForFunction(
+        async () => {
+          const tabs = await window.auralide.auraInvoke({ tool: 'browser.listTabs', input: {} });
+          const tab = tabs.value.find((item) => item.mode === 'slide-preview');
+          const result = await window.auralide.auraInvoke({
+            tool: 'preview.screenshot',
+            input: { tabId: tab.id, expectedRevision: tab.revision },
+          });
+          return result.ok;
+        },
+        undefined,
+        { timeout: 10000 },
+      );
       const capture = await page.evaluate(async () => {
         const tabs = await window.auralide.auraInvoke({ tool: 'browser.listTabs', input: {} });
         const tab = tabs.value.find((item) => item.mode === 'slide-preview');
