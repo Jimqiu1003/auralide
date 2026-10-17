@@ -221,7 +221,12 @@ async function runMode(mode) {
       servedHtml = await waitForDevServer(devServerUrl, devServer);
     }
     const env = { ...process.env, AURALIDE_DEV_SERVER_URL: mode === 'dev' ? devServerUrl : '' };
-    app = await electron.launch({ args: ['.'], cwd: appRoot, env, timeout: 60_000 });
+    app = await electron.launch({
+      args: ['.', '--user-data-dir=' + join(artifacts, 'smoke-profile-' + mode)],
+      cwd: appRoot,
+      env,
+      timeout: 60_000,
+    });
     electronVersion = await app.evaluate(() => process.versions.electron);
     app.process().stdout?.on('data', (chunk) => startupLines.push(String(chunk).trim()));
     const page = await app.firstWindow({ timeout: 60_000 });
@@ -232,6 +237,8 @@ async function runMode(mode) {
     });
 
     await page.waitForLoadState('domcontentloaded');
+    await page.goto(page.url() + '#diagnostics');
+    await page.reload();
     check('window.url', page.url().startsWith(mode === 'dev' ? devServerUrl : 'file://'), true);
     check('window.title', await page.title(), 'Auralide');
 
@@ -259,7 +266,7 @@ async function runMode(mode) {
     check(
       'bridge-version',
       await page.locator('[data-testid="bridge-version"]').textContent(),
-      '1.3.0',
+      '1.4.0',
     );
 
     // Renderer boundary: nothing but the frozen bridge is reachable.
@@ -280,7 +287,7 @@ async function runMode(mode) {
     check(
       'bridge keys',
       exposed.keys,
-      'applyCommand,auraInvoke,auraSetBounds,bridgeVersion,getDocument,getRuntimeInfo,openDocument,ping,saveDocument',
+      'applyCommand,auraInvoke,auraSetBounds,bridgeVersion,getDocument,getDocumentStatus,getRuntimeInfo,openDocument,ping,saveDocument',
     );
     checkTruthy('bridge is frozen', exposed.frozen);
 
@@ -379,17 +386,19 @@ async function runMode(mode) {
         origin: { kind: 'human' },
       });
     });
+    await page.getByTestId('document-text-input').fill('Keep rejected UI draft');
     await page.getByTestId('document-apply').click();
     await page.waitForFunction(() =>
       document
         .querySelector('[data-testid="document-status"]')
-        ?.textContent?.includes('stale-revision'),
+        ?.textContent?.includes('修改已拒绝'),
     );
     check(
       'stale UI keeps its snapshot',
       await page.getByTestId('document-revision').textContent(),
       '2',
     );
+    await page.getByTestId('document-text-input').press('Escape');
     await page.getByTestId('document-reload').click();
     await page.waitForFunction(
       () => document.querySelector('[data-testid="document-revision"]')?.textContent === '3',
@@ -436,8 +445,9 @@ async function runMode(mode) {
     );
     const editedSlide = await page.evaluate(() => window.auralide.getDocument());
     check('demo edits inserted text', editedSlide.slides[1].elements[1].text, 'Desktop Demo 0.1');
-    await page.getByTestId('demo-layer-item').first().click();
-    await page.getByRole('button', { name: '→', exact: true }).click();
+    await page.getByTestId('demo-layer-item').last().click();
+    await page.getByRole('button', { name: '排列', exact: true }).click();
+    await page.getByRole('button', { name: '向右移动10像素', exact: true }).click();
     await page.waitForFunction(
       () => document.querySelector('[data-testid="document-revision"]')?.textContent === '9',
     );

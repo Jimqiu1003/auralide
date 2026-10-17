@@ -1,6 +1,10 @@
 import { createIdGenerator } from '@auralide/core';
 import type { Element, Presentation, Slide } from '@auralide/core';
 import { useEffect, useRef, useState } from 'react';
+import type { DocumentStatus } from '../shared/api.js';
+import { AuraWorkspace } from './aura-workspace.js';
+import { SlideArtwork } from './slide-artwork.js';
+import { Icon } from './icons.js';
 import type { JSX, PointerEvent as ReactPointerEvent } from 'react';
 
 const ids = createIdGenerator();
@@ -29,26 +33,44 @@ const elementLabel = (element: Element): string =>
       : 'Image (asset preview pending)');
 
 /**
- * V0.1 editor shell. The renderer only owns selection and draft UI state.
+ * A2 production shell. The renderer only owns selection and draft UI state.
  * Every persistent edit goes to main's existing Core Dispatcher.
  */
-export function DocumentPreview(): JSX.Element {
+export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean }): JSX.Element {
   const [document, setDocument] = useState<Presentation | null>(null);
   const [slideId, setSlideId] = useState('');
   const [elementId, setElementId] = useState('');
   const [text, setText] = useState('');
-  const [message, setMessage] = useState('Loading document…');
+  const drafts = useRef(new Map<string, string>());
+  const [fileStatus, setFileStatus] = useState<DocumentStatus | null>(null);
+  const [workspace, setWorkspace] = useState<'editor' | 'aura'>('editor');
+  const [inspectorTab, setInspectorTab] = useState<'design' | 'arrange'>('design');
+  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('light');
+  const [modal, setModal] = useState<
+    'menu' | 'save-drafts' | 'open-drafts' | 'delete-slide' | null
+  >(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const invoker = useRef<HTMLElement | null>(null);
+  const locked = useRef(false);
+  const pendingFocus = useRef<HTMLElement | null>(null);
+  const [message, setMessage] = useState('正在读取文档…');
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
   const [zoom, setZoom] = useState(100);
   const [dragPreview, setDragPreview] = useState<{ id: string; x: number; y: number } | null>(null);
   const drag = useRef<DragState | null>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [fitWidth, setFitWidth] = useState(720);
 
   const slide = document?.slides.find((item) => item.id === slideId) ?? document?.slides[0];
   const selected = slide?.elements.find((item) => item.id === elementId);
   const textElement = selected?.kind === 'text' ? selected : undefined;
 
   const adopt = (value: Presentation, nextSlide?: string, nextElement?: string): void => {
+    for (const id of drafts.current.keys()) {
+      if (!value.slides.some((page) => page.elements.some((item) => item.id === id)))
+        drafts.current.delete(id);
+    }
     setDocument(value);
     const currentSlide =
       value.slides.find((item) => item.id === (nextSlide ?? slideId)) ?? value.slides[0];
@@ -58,7 +80,11 @@ export function DocumentPreview(): JSX.Element {
       currentSlide?.elements[0];
     setSlideId(currentSlide?.id ?? '');
     setElementId(currentElement?.id ?? '');
-    setText(currentElement?.kind === 'text' ? currentElement.text : '');
+    setText(
+      currentElement?.kind === 'text'
+        ? (drafts.current.get(currentElement.id) ?? currentElement.text)
+        : '',
+    );
   };
 
   useEffect(() => {
@@ -69,17 +95,22 @@ export function DocumentPreview(): JSX.Element {
       return;
     }
     setBusy(true);
-    void bridge.getDocument().then(
-      (value) => {
+    void Promise.all([bridge.getDocument(), bridge.getDocumentStatus()]).then(
+      ([value, status]) => {
         if (cancelled) return;
+        setFileStatus(status);
         const initialSlide = value.slides[0];
         const initialElement =
           initialSlide?.elements.find((item) => item.kind === 'text') ?? initialSlide?.elements[0];
         setDocument(value);
         setSlideId(initialSlide?.id ?? '');
         setElementId(initialElement?.id ?? '');
-        setText(initialElement?.kind === 'text' ? initialElement.text : '');
-        setMessage('Ready · Core-backed editing · local snapshot storage');
+        setText(
+          initialElement?.kind === 'text'
+            ? (drafts.current.get(initialElement.id) ?? initialElement.text)
+            : '',
+        );
+        setMessage('就绪 · 文件保存在本地');
         setBusy(false);
       },
       (error: unknown) => {
@@ -99,12 +130,12 @@ export function DocumentPreview(): JSX.Element {
     const nextId = firstText(item) || item.elements[0]?.id || '';
     setElementId(nextId);
     const next = item.elements.find((element) => element.id === nextId);
-    setText(next?.kind === 'text' ? next.text : '');
+    setText(next?.kind === 'text' ? (drafts.current.get(next.id) ?? next.text) : '');
   };
 
   const selectElement = (item: Element): void => {
     setElementId(item.id);
-    setText(item.kind === 'text' ? item.text : '');
+    setText(item.kind === 'text' ? (drafts.current.get(item.id) ?? item.text) : '');
   };
 
   const apply = async (
@@ -114,7 +145,9 @@ export function DocumentPreview(): JSX.Element {
     nextSlide?: string,
     nextElement?: string,
   ): Promise<boolean> => {
-    if (document === null || busy || window.auralide === undefined) return false;
+    if (document === null || locked.current || window.auralide === undefined) return false;
+    pendingFocus.current = globalThis.document.activeElement as HTMLElement | null;
+    locked.current = true;
     setBusy(true);
     try {
       const result = await window.auralide.applyCommand({
@@ -125,20 +158,19 @@ export function DocumentPreview(): JSX.Element {
         origin: { kind: 'human' },
       });
       if (!result.ok) {
-        setMessage('Edit refused: ' + result.error.code + '. Reload the document before retrying.');
+        setMessage('修改已拒绝，当前输入已保留。请读取最新文档后重试。');
         return false;
       }
+      if (operation === 'element.updateText') drafts.current.delete(target.elementId ?? '');
       adopt(result.value, nextSlide, nextElement);
-      setMessage(
-        operation === 'element.updateText'
-          ? 'Text updated through Core.'
-          : 'Applied ' + operation + ' · revision ' + result.value.revision,
-      );
+      setFileStatus(await window.auralide.getDocumentStatus());
+      setMessage(operation === 'element.updateText' ? '文本已更新' : '修改已应用，尚未保存');
       return true;
-    } catch (error: unknown) {
-      setMessage('Edit failed: ' + description(error));
+    } catch {
+      setMessage('修改未完成，当前输入已保留。请重试。');
       return false;
     } finally {
+      locked.current = false;
       setBusy(false);
     }
   };
@@ -160,7 +192,7 @@ export function DocumentPreview(): JSX.Element {
       { kind: 'presentation' },
       {
         id,
-        name: 'Slide ' + (document.slides.length + 1),
+        name: '幻灯片 ' + (document.slides.length + 1),
         backgroundColor: '#ffffff',
       },
       id,
@@ -170,7 +202,7 @@ export function DocumentPreview(): JSX.Element {
 
   const deleteSlide = async (): Promise<void> => {
     if (slide === undefined || document === null || document.slides.length <= 1) return;
-    if (!window.confirm('Delete this slide? This change cannot be undone in this demo UI.')) return;
+
     const next = document.slides.find((item) => item.id !== slide.id);
     await apply('slide.remove', { kind: 'slide', slideId: slide.id }, {}, next?.id, '');
   };
@@ -190,15 +222,15 @@ export function DocumentPreview(): JSX.Element {
         ? {
             id,
             kind: 'text',
-            name: 'Text',
-            text: 'Double-click the text field to edit',
+            name: '文本',
+            text: '在右侧输入你的想法',
             geometry,
             style: { fontSize: 40, color: '#172033', fontWeight: 500 },
           }
         : {
             id,
             kind: 'shape',
-            name: kind === 'ellipse' ? 'Ellipse' : 'Rectangle',
+            name: kind === 'ellipse' ? '椭圆' : '矩形',
             shape: kind,
             geometry,
             fill: '#4677e8',
@@ -241,29 +273,81 @@ export function DocumentPreview(): JSX.Element {
     );
   };
 
-  const fileAction = async (operation: 'saveDocument' | 'openDocument'): Promise<void> => {
-    if (document === null || busy || window.auralide === undefined) return;
+  const fileAction = async (
+    operation: 'saveDocument' | 'openDocument',
+    confirmed = false,
+  ): Promise<void> => {
+    const bridge = window.auralide;
+    if (document === null || locked.current || bridge === undefined) return;
+    if (drafts.current.size && !confirmed) {
+      showModal(operation === 'saveDocument' ? 'save-drafts' : 'open-drafts');
+      return;
+    }
+    pendingFocus.current = modal
+      ? invoker.current
+      : (globalThis.document.activeElement as HTMLElement | null);
+    closeModal();
+    locked.current = true;
     setBusy(true);
+    setMessage(operation === 'saveDocument' ? '正在保存…' : '正在打开…');
     try {
-      const result = await window.auralide[operation]({ expectedRevision: document.revision });
+      await bridge.auraSetBounds({ x: 0, y: 0, width: 0, height: 0, visible: false });
+      let current = document;
+      if (operation === 'saveDocument') {
+        for (const [id, value] of drafts.current) {
+          const owner = current.slides.find((item) =>
+            item.elements.some((element) => element.id === id),
+          );
+          if (!owner) continue;
+          const applied = await bridge.applyCommand({
+            operation: 'element.updateText',
+            target: { kind: 'element', slideId: owner.id, elementId: id },
+            payload: { text: value },
+            expectedRevision: current.revision,
+            origin: { kind: 'human' },
+          });
+          if (!applied.ok) {
+            setMessage('文本应用被拒绝，草稿已保留。请读取最新文档。');
+            return;
+          }
+          current = applied.value;
+          drafts.current.delete(id);
+          adopt(current);
+        }
+      }
+      const result = await bridge[operation]({ expectedRevision: current.revision });
       if (result.ok) {
+        if (operation === 'openDocument') drafts.current.clear();
         adopt(
           result.value.document,
           operation === 'openDocument' ? '' : undefined,
           operation === 'openDocument' ? '' : undefined,
         );
         setMessage(
-          (operation === 'saveDocument' ? 'Saved · ' : 'Opened · ') +
+          (operation === 'saveDocument' ? '已保存 · ' : '已打开 · ') +
             result.value.fileName +
-            (result.value.backupCreated ? ' · recovery backup retained' : '') +
-            (result.value.historyReset ? ' · session undo history reset' : ''),
+            (result.value.backupCreated ? ' · 已保留恢复备份' : '') +
+            (result.value.historyReset ? ' · 会话历史已重置' : ''),
         );
       } else {
-        setMessage('File operation refused: ' + result.error.code + '. ' + result.error.message);
+        const messages: Record<string, string> = {
+          cancelled: '操作已取消，未保存内容已保留',
+          'file-changed': '文件已在外部修改，保存已拒绝。未保存内容已保留',
+          'stale-revision': '文档版本已更新，操作已拒绝。未保存输入已保留',
+          'access-denied': '无法写入文件，未保存内容已保留',
+          'invalid-json': '文件格式无效，当前文档已保留',
+        };
+        setMessage(messages[result.error.code] ?? '文件操作失败，当前文档和输入已保留');
       }
-    } catch (error: unknown) {
-      setMessage(description(error));
+    } catch {
+      setMessage('文件操作未完成，当前文档和输入已保留');
     } finally {
+      try {
+        setFileStatus(await bridge.getDocumentStatus());
+      } catch {
+        /* The existing status stays visible if the transport fails. */
+      }
+      locked.current = false;
       setBusy(false);
     }
   };
@@ -338,407 +422,735 @@ export function DocumentPreview(): JSX.Element {
     }
   };
 
+  function showModal(value: NonNullable<typeof modal>): void {
+    if (modal === null) invoker.current = globalThis.document.activeElement as HTMLElement | null;
+    setModal(value);
+  }
+  function closeModal(): void {
+    dialogRef.current?.close();
+    setModal(null);
+  }
+  async function changeWorkspace(value: 'editor' | 'aura'): Promise<void> {
+    if (busy) return;
+    if (value === 'editor')
+      await window.auralide?.auraSetBounds({ x: 0, y: 0, width: 0, height: 0, visible: false });
+    setWorkspace(value);
+    if (value === 'editor')
+      requestAnimationFrame(() =>
+        globalThis.document.querySelector<HTMLElement>('[data-workspace="editor"]')?.focus(),
+      );
+  }
+  useEffect(() => {
+    const media = matchMedia('(prefers-color-scheme: dark)');
+    const update = (): void => {
+      globalThis.document.documentElement.dataset.theme =
+        theme === 'system' ? (media.matches ? 'dark' : 'light') : theme;
+    };
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, [theme]);
+  useEffect(() => {
+    if (modal === null) return;
+    let cancelled = false;
+    void window.auralide
+      ?.auraSetBounds({ x: 0, y: 0, width: 0, height: 0, visible: false })
+      .then(() => {
+        if (!cancelled && !dialogRef.current?.open) dialogRef.current?.showModal();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [modal]);
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent): void => {
+      if (drafts.current.size) event.preventDefault();
+    };
+    const keys = (event: KeyboardEvent): void => {
+      if (modal || busy || globalThis.document.activeElement?.tagName === 'IFRAME') return;
+      if ((event.ctrlKey || event.metaKey) && ['s', 'o'].includes(event.key.toLowerCase())) {
+        event.preventDefault();
+        void fileAction(event.key.toLowerCase() === 's' ? 'saveDocument' : 'openDocument');
+        return;
+      }
+      const target = event.target as HTMLElement;
+      if (target.closest('input,textarea,select')) {
+        if (event.key === 'Escape' && target.closest('.inspector')) {
+          drafts.current.delete(elementId);
+          setText(textElement?.text ?? '');
+          globalThis.document.querySelector<HTMLElement>('.canvas-stage')?.focus();
+        }
+        return;
+      }
+      if (workspace !== 'editor' || !selected || !target.closest('.slide-preview,.layer-item'))
+        return;
+      const step = event.shiftKey ? 10 : 1;
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+        event.preventDefault();
+        void move(
+          selected.geometry.x +
+            (event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0),
+          selected.geometry.y +
+            (event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0),
+        );
+      }
+      if (event.key === 'Delete' || event.key === 'Backspace') {
+        event.preventDefault();
+        void removeElement();
+        requestAnimationFrame(() =>
+          globalThis.document.querySelector<HTMLElement>('.canvas-stage')?.focus(),
+        );
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    window.addEventListener('keydown', keys);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+      window.removeEventListener('keydown', keys);
+    };
+  });
+
+  useEffect(() => {
+    const element = stageRef.current;
+    if (!element) return;
+    const update = (): void => {
+      const ratio = (document?.slideSize.width ?? 1280) / (document?.slideSize.height ?? 720);
+      setFitWidth(
+        Math.max(1, Math.min(element.clientWidth - 40, (element.clientHeight - 28) * ratio)),
+      );
+    };
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    update();
+    return () => observer.disconnect();
+  }, [document?.slideSize.width, document?.slideSize.height, workspace]);
+
+  useEffect(() => {
+    if (busy || modal || !pendingFocus.current) return;
+    const target = pendingFocus.current;
+    pendingFocus.current = null;
+    if (target.isConnected && !target.matches(':disabled') && target.getClientRects().length)
+      target.focus();
+    else
+      globalThis.document
+        .querySelector<HTMLElement>(
+          workspace === 'editor'
+            ? '[data-testid="document-text-input"]:not(:disabled)'
+            : '[data-workspace="aura"]',
+        )
+        ?.focus();
+    if (globalThis.document.activeElement === globalThis.document.body)
+      globalThis.document.querySelector<HTMLElement>('#editor-canvas')?.focus();
+  });
+
   return (
     <section
-      className="document"
-      aria-labelledby="document-heading"
+      className={`document studio-app${diagnostics ? ' diagnostic-editor' : ''}`}
+      aria-label="Auralide 桌面编辑器"
       aria-busy={busy}
       data-testid="demo-workspace"
     >
-      <header className="editor-topbar">
-        <div className="brand-lockup">
-          <span className="brand-symbol" aria-hidden="true">
-            A
-          </span>
-          <div>
-            <p className="brand-name">
-              Auralide <span>Demo 0.1</span>
-            </p>
-            <h2 id="document-heading">{document?.title ?? 'New presentation'}</h2>
-          </div>
-        </div>
-        <div className="editor-top-actions">
-          <span className="revision-pill">
-            Revision <output data-testid="document-revision">{document?.revision ?? '—'}</output>
-          </span>
-          <button
-            type="button"
-            data-testid="document-reload"
-            disabled={busy}
-            onClick={() => setReload((value) => value + 1)}
+      <a className="skip-link" href={workspace === 'editor' ? '#editor-canvas' : '#aura-heading'}>
+        跳到工作区
+      </a>
+      <header className="titlebar">
+        <span className="brand">
+          <span className="brand-mark">a</span>
+          <strong>Auralide</strong>
+        </span>
+        <span className="divider" />
+        <button
+          className="document-title"
+          onClick={() => showModal('menu')}
+          aria-label={`${document?.title ?? '正在读取文档'} · 文档菜单`}
+        >
+          <span id="document-heading">{document?.title ?? '正在读取文档'}</span>
+          <span className="muted">⌄</span>
+        </button>
+        <output
+          className={`save-state${fileStatus?.dirty ? ' is-dirty' : ''}`}
+          data-testid="save-state"
+        >
+          {busy
+            ? '正在处理…'
+            : drafts.current.size
+              ? '有未应用输入'
+              : fileStatus?.dirty
+                ? '有未保存修改'
+                : fileStatus?.fileName
+                  ? '已保存'
+                  : '尚未保存为文件'}
+        </output>
+        <div className="title-actions">
+          <select
+            aria-label="主题"
+            value={theme}
+            onChange={(event) => setTheme(event.target.value as typeof theme)}
           >
-            Refresh
-          </button>
+            <option value="light">浅色</option>
+            <option value="dark">深色</option>
+            <option value="system">跟随系统</option>
+          </select>
           <button
-            type="button"
             data-testid="document-open"
             disabled={document === null || busy}
             onClick={() => void fileAction('openDocument')}
           >
-            Open
+            <Icon name="folder" />
+            打开
           </button>
           <button
-            type="button"
-            className="button-primary"
+            className="primary"
             data-testid="document-save"
             disabled={document === null || busy}
             onClick={() => void fileAction('saveDocument')}
           >
-            Save
+            <Icon name="save" />
+            保存
           </button>
         </div>
       </header>
-
-      <div className="editor-toolbar">
-        <div className="toolbar-group">
-          <span className="toolbar-label">Insert</span>
-          <button
-            type="button"
-            data-testid="demo-add-slide"
-            disabled={busy || document === null}
-            onClick={() => void addSlide()}
-          >
-            + Slide
-          </button>
-          <button
-            type="button"
-            data-testid="demo-add-text"
-            disabled={busy || slide === undefined}
-            onClick={() => void addElement('text')}
-          >
-            T Text
-          </button>
-          <button
-            type="button"
-            data-testid="demo-add-rectangle"
-            disabled={busy || slide === undefined}
-            onClick={() => void addElement('rectangle')}
-          >
-            ▭ Rectangle
-          </button>
-          <button
-            type="button"
-            data-testid="demo-add-ellipse"
-            disabled={busy || slide === undefined}
-            onClick={() => void addElement('ellipse')}
-          >
-            ◯ Ellipse
-          </button>
+      <nav className="studio-nav" aria-label="工作区">
+        <button className="file-menu" onClick={() => showModal('menu')}>
+          文件
+        </button>
+        <button
+          data-workspace="editor"
+          aria-pressed={workspace === 'editor'}
+          disabled={busy}
+          onClick={() => void changeWorkspace('editor')}
+        >
+          编辑器
+        </button>
+        <button
+          data-workspace="aura"
+          aria-pressed={workspace === 'aura'}
+          disabled={busy || document === null || slide === undefined || diagnostics}
+          onClick={() => void changeWorkspace('aura')}
+        >
+          Aura 预览
+        </button>
+        <span className="nav-spacer" />
+        <button disabled title="Agent 授权和提案服务尚未实现">
+          <Icon name="spark" />
+          Agent · 未启用
+        </button>
+      </nav>
+      <div className="ribbon" aria-label="分组编辑工具">
+        <div className="ribbon-section">
+          <div className="tool-group">
+            <button
+              className="ribbon-tool"
+              data-testid="demo-add-slide"
+              disabled={busy || document === null || workspace !== 'editor'}
+              onClick={() => void addSlide()}
+            >
+              <Icon name="slide" />
+              新建页
+            </button>
+            <button
+              className="ribbon-tool"
+              data-testid="demo-add-text"
+              disabled={busy || slide === undefined || workspace !== 'editor'}
+              onClick={() => void addElement('text')}
+            >
+              <Icon name="text" />
+              文本框
+            </button>
+            <button
+              className="ribbon-tool"
+              data-testid="demo-add-rectangle"
+              disabled={busy || slide === undefined || workspace !== 'editor'}
+              onClick={() => void addElement('rectangle')}
+            >
+              <Icon name="shape" />
+              矩形
+            </button>
+            <button
+              className="ribbon-tool"
+              data-testid="demo-add-ellipse"
+              disabled={busy || slide === undefined || workspace !== 'editor'}
+              onClick={() => void addElement('ellipse')}
+            >
+              <span aria-hidden="true">◯</span>椭圆
+            </button>
+          </div>
+          <span className="ribbon-caption">插入</span>
         </div>
-        <span className="toolbar-note">
-          Click to select · Drag to move · All edits validated by Core
-        </span>
+        <div className="ribbon-section">
+          <div className="tool-group">
+            <button
+              className="icon-button"
+              disabled
+              aria-label="撤销（尚未接入）"
+              title="文档撤销控件尚未接入"
+            >
+              <Icon name="undo" />
+            </button>
+            <button
+              className="icon-button"
+              disabled
+              aria-label="重做（尚未接入）"
+              title="文档重做控件尚未接入"
+            >
+              <Icon name="redo" />
+            </button>
+            <button
+              disabled={busy || !selected || workspace !== 'editor'}
+              onClick={() => void removeElement()}
+            >
+              <Icon name="trash" />
+              删除对象
+            </button>
+          </div>
+          <span className="ribbon-caption">编辑</span>
+        </div>
+        <div className="ribbon-section context-ribbon">
+          <div className="tool-group">
+            <span className="context-font">系统字体</span>
+            <button disabled title="字号编辑尚未接入">
+              字号 {textElement?.style?.fontSize ?? '—'}
+            </button>
+            <button disabled title="字重编辑尚未接入" aria-label="粗体（尚未接入）">
+              <b>B</b>
+            </button>
+            <button disabled title="样式命令尚未接入">
+              颜色
+            </button>
+          </div>
+          <span className="ribbon-caption">
+            {workspace === 'aura'
+              ? '隔离预览 · 文档保持不变'
+              : selected
+                ? `${selected.kind === 'text' ? '文本' : selected.kind === 'shape' ? '形状' : '图像'} · ${elementLabel(selected)}`
+                : '选择对象以编辑'}
+          </span>
+        </div>
       </div>
-
       <div className="editor-columns">
-        <aside className="slide-rail" aria-label="Slides">
-          <div className="panel-title">
-            Slides <span>{document?.slides.length ?? 0}</span>
+        <aside className="slide-rail" aria-label="幻灯片与图层">
+          <div className="panel-heading">
+            幻灯片 <span className="count">{document?.slides.length ?? 0}</span>
           </div>
           <div className="slide-list">
             {document?.slides.map((item, index) => (
               <button
-                className={'slide-card' + (slide?.id === item.id ? ' selected' : '')}
+                className="slide-card"
                 type="button"
                 key={item.id}
+                aria-label={`幻灯片 ${index + 1}：${item.name ?? ''}`}
                 aria-pressed={slide?.id === item.id}
                 data-testid="demo-slide-item"
+                disabled={busy}
                 onClick={() => selectSlide(item)}
               >
-                <span className="slide-index">{index + 1}</span>
-                <span
-                  className="slide-thumb"
-                  style={{ background: item.backgroundColor ?? '#fff' }}
-                >
-                  <span style={{ color: item.backgroundColor === '#171b2b' ? '#fff' : '#344054' }}>
-                    {(() => {
-                      const preview = item.elements.find((element) => element.kind === 'text');
-                      return preview?.kind === 'text'
-                        ? preview.text.slice(0, 25)
-                        : (item.name ?? 'New slide');
-                    })()}
-                  </span>
+                <span className="slide-number">{index + 1}</span>
+                <span className="slide-thumb">
+                  <SlideArtwork slide={item} size={document.slideSize} />
                 </span>
-                <span className="slide-caption">{item.name ?? 'Slide ' + (index + 1)}</span>
+                <span className="slide-caption">{item.name ?? `幻灯片 ${index + 1}`}</span>
               </button>
             ))}
           </div>
-          <button
-            type="button"
-            className="rail-add"
-            disabled={busy || document === null}
-            onClick={() => void addSlide()}
-          >
-            + Add slide
-          </button>
+          <details className="studio-layers" open>
+            <summary>
+              当前页图层 <span className="tiny muted">前 → 后</span>
+            </summary>
+            <div className="layer-list">
+              {slide &&
+                [...slide.elements].reverse().map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    data-testid="demo-layer-item"
+                    className="layer-item"
+                    aria-pressed={selected?.id === item.id}
+                    disabled={busy}
+                    onClick={() => selectElement(item)}
+                  >
+                    <Icon name={item.kind === 'text' ? 'text' : 'shape'} />
+                    <span>{elementLabel(item)}</span>
+                  </button>
+                ))}
+            </div>
+          </details>
         </aside>
-
-        <section className="canvas-region" aria-label="Canvas">
-          <div className="canvas-meta">
-            <span>{slide?.name ?? 'Canvas'}</span>
+        <section className="canvas-column" aria-label="画布工作区">
+          <div className="canvas-topline">
+            <span>{slide?.name ?? '画布'}</span>
             <span>
-              16:9 · {document?.slideSize.width ?? 1280} × {document?.slideSize.height ?? 720}
+              {document?.slideSize.width ?? 1280} × {document?.slideSize.height ?? 720} px
             </span>
           </div>
-          <div className="canvas-stage">
-            {document !== null && slide !== undefined ? (
-              <svg
-                className="slide-preview"
-                style={{ width: zoom + '%' }}
-                viewBox={'0 0 ' + document.slideSize.width + ' ' + document.slideSize.height}
-                role="img"
-                aria-label={slide.name ?? 'Slide preview'}
-                data-testid="slide-preview"
-                onPointerMove={pointerMove}
-                onPointerUp={pointerUp}
-                onPointerCancel={() => {
-                  drag.current = null;
-                  setDragPreview(null);
-                }}
-              >
-                <rect width="100%" height="100%" fill={slide.backgroundColor ?? '#ffffff'} />
-                {slide.elements.map((item) => {
-                  const x = dragPreview?.id === item.id ? dragPreview.x : item.geometry.x;
-                  const y = dragPreview?.id === item.id ? dragPreview.y : item.geometry.y;
-                  const active = selected?.id === item.id;
-                  return (
-                    <g
-                      key={item.id}
-                      data-element-id={item.id}
-                      onPointerDown={(event) => pointerDown(event, item)}
-                      style={{ cursor: busy ? 'default' : 'move' }}
-                    >
-                      {item.kind === 'text' ? (
-                        <foreignObject
-                          x={x}
-                          y={y}
-                          width={item.geometry.width}
-                          height={item.geometry.height}
-                        >
-                          <div
-                            className="slide-text"
-                            data-testid="slide-text"
-                            style={{
-                              fontSize: item.style?.fontSize ?? 32,
-                              fontWeight: item.style?.fontWeight ?? 400,
-                              color: item.style?.color ?? '#172033',
-                              textAlign: item.style?.align ?? 'left',
-                            }}
-                          >
-                            {item.text}
-                          </div>
-                        </foreignObject>
-                      ) : item.kind === 'shape' ? (
-                        item.shape === 'ellipse' ? (
-                          <ellipse
-                            cx={x + item.geometry.width / 2}
-                            cy={y + item.geometry.height / 2}
-                            rx={item.geometry.width / 2}
-                            ry={item.geometry.height / 2}
-                            fill={item.fill ?? '#4677e8'}
-                            stroke={item.stroke ?? 'none'}
-                          />
-                        ) : item.shape === 'line' ? (
-                          <line
-                            x1={x}
-                            y1={y}
-                            x2={x + item.geometry.width}
-                            y2={y + item.geometry.height}
-                            stroke={item.stroke ?? item.fill ?? '#4677e8'}
-                            strokeWidth="4"
-                          />
-                        ) : (
-                          <rect
-                            x={x}
-                            y={y}
-                            width={item.geometry.width}
-                            height={item.geometry.height}
-                            fill={item.fill ?? '#4677e8'}
-                            stroke={item.stroke ?? 'none'}
-                          />
-                        )
-                      ) : (
-                        <rect
-                          x={x}
-                          y={y}
-                          width={item.geometry.width}
-                          height={item.geometry.height}
-                          fill="#e6e9ee"
-                          stroke="#9aa5b5"
-                          strokeDasharray="12 8"
-                        />
-                      )}
-                      {active ? (
-                        <rect
-                          x={x}
-                          y={y}
-                          width={item.geometry.width}
-                          height={item.geometry.height}
-                          fill="none"
-                          stroke="#4b8cff"
-                          strokeWidth="3"
-                          pointerEvents="none"
-                        />
-                      ) : null}
-                    </g>
-                  );
-                })}
-              </svg>
-            ) : (
-              <p>No slide available.</p>
-            )}
+          <div
+            ref={stageRef}
+            id="editor-canvas"
+            className="canvas-stage"
+            tabIndex={0}
+            hidden={workspace !== 'editor'}
+            aria-label="编辑画布，Tab 选择对象，方向键移动"
+          >
+            <div
+              className="slide-frame"
+              style={{
+                aspectRatio: `${document?.slideSize.width ?? 1280} / ${document?.slideSize.height ?? 720}`,
+                width: `${(fitWidth * zoom) / 100}px`,
+              }}
+            >
+              {document && slide ? (
+                <SlideArtwork
+                  slide={slide}
+                  size={document.slideSize}
+                  selectedId={elementId}
+                  drag={dragPreview}
+                  onSelect={selectElement}
+                  onPointerDown={pointerDown}
+                  onPointerMove={pointerMove}
+                  onPointerUp={pointerUp}
+                  onPointerCancel={() => {
+                    drag.current = null;
+                    setDragPreview(null);
+                  }}
+                  onEdit={() =>
+                    requestAnimationFrame(() =>
+                      globalThis.document
+                        .querySelector<HTMLTextAreaElement>('[data-testid="document-text-input"]')
+                        ?.focus(),
+                    )
+                  }
+                />
+              ) : (
+                <p>{message}</p>
+              )}
+            </div>
           </div>
-          <div className="canvas-footer">
-            <span>Local-first · No cloud upload</span>
-            <div className="zoom-group" aria-label="Zoom">
-              <button type="button" onClick={() => setZoom((v) => Math.max(50, v - 10))}>
+          {!diagnostics && (
+            <AuraWorkspace
+              enabled={workspace === 'aura'}
+              suspended={busy || modal !== null}
+              slideId={slide?.id ?? ''}
+              revision={document?.revision ?? 0}
+              onReturn={() => void changeWorkspace('editor')}
+            />
+          )}
+          <div className="canvas-bottom">
+            <span>
+              幻灯片{' '}
+              {slide ? (document?.slides.findIndex((item) => item.id === slide.id) ?? 0) + 1 : 0} /{' '}
+              {document?.slides.length ?? 0}
+            </span>
+            <span className="canvas-hint">
+              {workspace === 'editor' ? '单击选择 · 拖动或方向键移动' : '原生隔离预览'}
+            </span>
+            <div className="zoom-tools">
+              <button
+                aria-label="缩小"
+                disabled={workspace !== 'editor'}
+                onClick={() => setZoom((value) => Math.max(50, value - 10))}
+              >
                 −
               </button>
-              <span>{zoom}%</span>
-              <button type="button" onClick={() => setZoom((v) => Math.min(150, v + 10))}>
+              <output>{zoom === 100 ? '适应' : `${zoom}%`}</output>
+              <button
+                aria-label="放大"
+                disabled={workspace !== 'editor'}
+                onClick={() => setZoom((value) => Math.min(150, value + 10))}
+              >
                 +
+              </button>
+              <button aria-label="适应窗口" onClick={() => setZoom(100)}>
+                <Icon name="fit" />
               </button>
             </div>
           </div>
         </section>
-
-        <aside className="inspector" aria-label="Layers and properties">
-          <div className="panel-title">
-            Layers <span>{slide?.elements.length ?? 0}</span>
+        <aside className="right-panel" aria-label="属性检查器">
+          <div className="panel-heading">
+            {workspace === 'aura' ? '预览信息' : '设置对象格式'}
+            <Icon name="sliders" />
           </div>
-          <div className="layer-list">
-            {slide?.elements.map((item) => (
-              <button
-                type="button"
-                key={item.id}
-                data-testid="demo-layer-item"
-                className={'layer-item' + (selected?.id === item.id ? ' active' : '')}
-                aria-pressed={selected?.id === item.id}
-                onClick={() => selectElement(item)}
-              >
-                <span className="layer-icon">
-                  {item.kind === 'text' ? 'T' : item.kind === 'shape' ? '▢' : '▧'}
-                </span>
-                <span>{elementLabel(item)}</span>
-              </button>
-            ))}
-          </div>
-          <div className="inspector-divider" />
-          <div className="panel-title">Properties</div>
-          {selected === undefined ? (
-            <p className="inspector-help">Select a layer to edit its properties.</p>
-          ) : (
-            <>
-              <label className="field-label" htmlFor="selected-id">
-                Element ID
-              </label>
-              <input id="selected-id" readOnly value={selected.id} className="readonly-field" />
-              {textElement !== undefined ? (
-                <form
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    void updateText();
-                  }}
-                >
-                  <label className="field-label" htmlFor="slide-title">
-                    Text content
-                  </label>
-                  <textarea
-                    id="slide-title"
-                    data-testid="document-text-input"
-                    rows={4}
-                    value={text}
-                    disabled={busy}
-                    onChange={(event) => setText(event.target.value)}
-                  />
-                  <button
-                    className="button-primary inspector-apply"
-                    type="submit"
-                    data-testid="document-apply"
-                    disabled={busy}
-                  >
-                    {busy ? 'Applying…' : 'Apply text'}
-                  </button>
-                </form>
-              ) : (
+          <nav className="inspector-tabs" aria-label="检查器">
+            <button
+              aria-pressed={inspectorTab === 'design'}
+              onClick={() => setInspectorTab('design')}
+            >
+              格式
+            </button>
+            <button
+              aria-pressed={inspectorTab === 'arrange'}
+              onClick={() => setInspectorTab('arrange')}
+            >
+              排列
+            </button>
+          </nav>
+          <div className="inspector">
+            {workspace === 'aura' ? (
+              <>
+                <div className="selection-heading">
+                  <Icon name="shield" />
+                  <div>
+                    <strong>Aura 工作区</strong>
+                    <small>当前文档的原生隔离预览</small>
+                  </div>
+                </div>
+                <h2>看见演示的另一面。</h2>
                 <p className="inspector-help">
-                  Shape color and resizing are planned for a later demo.
+                  预览使用独立会话，不拥有文件、编辑器或 Agent 权限。脚本和网络均禁用。
                 </p>
-              )}
-              <div className="geometry-title">
-                Position <span>px</span>
-              </div>
-              <div className="geometry-grid">
-                <span>
-                  X <b>{Math.round(selected.geometry.x)}</b>
-                </span>
-                <span>
-                  Y <b>{Math.round(selected.geometry.y)}</b>
-                </span>
-                <span>
-                  W <b>{Math.round(selected.geometry.width)}</b>
-                </span>
-                <span>
-                  H <b>{Math.round(selected.geometry.height)}</b>
-                </span>
-              </div>
-              <div className="move-pad" aria-label="Nudge selected element">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void move(selected.geometry.x - 10, selected.geometry.y)}
-                >
-                  ←
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void move(selected.geometry.x, selected.geometry.y - 10)}
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void move(selected.geometry.x, selected.geometry.y + 10)}
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void move(selected.geometry.x + 10, selected.geometry.y)}
-                >
-                  →
-                </button>
-              </div>
-              <button
-                className="destructive"
-                type="button"
-                data-testid="demo-delete-element"
-                disabled={busy}
-                onClick={() => void removeElement()}
-              >
-                Delete layer
-              </button>
-            </>
-          )}
-          <div className="inspector-divider" />
-          <button
-            type="button"
-            className="destructive"
-            data-testid="demo-delete-slide"
-            disabled={busy || (document?.slides.length ?? 0) <= 1}
-            onClick={() => void deleteSlide()}
-          >
-            Delete slide
-          </button>
+                <p className="inspector-help">
+                  切回编辑器后，当前页、对象选择及未应用输入保持不变。
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="selection-heading">
+                  <Icon name={selected?.kind === 'text' ? 'text' : selected ? 'shape' : 'slide'} />
+                  <div>
+                    <strong>{selected ? elementLabel(selected) : '幻灯片'}</strong>
+                    <small>
+                      {selected?.kind === 'text'
+                        ? '文本'
+                        : selected?.kind === 'shape'
+                          ? '形状'
+                          : '文档内容'}
+                    </small>
+                  </div>
+                </div>
+                {selected ? (
+                  inspectorTab === 'design' ? (
+                    textElement ? (
+                      <form
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          void updateText();
+                        }}
+                      >
+                        <h3>文字</h3>
+                        <label className="field-label" htmlFor="slide-title">
+                          内容
+                        </label>
+                        <textarea
+                          id="slide-title"
+                          data-testid="document-text-input"
+                          aria-describedby="text-draft-help"
+                          rows={4}
+                          value={text}
+                          disabled={busy}
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (value === textElement.text) drafts.current.delete(textElement.id);
+                            else drafts.current.set(textElement.id, value);
+                            setText(value);
+                          }}
+                        />
+                        <button
+                          className="inspector-apply"
+                          type="submit"
+                          data-testid="document-apply"
+                          disabled={busy || text === textElement.text}
+                        >
+                          应用文本修改
+                        </button>
+                        <p id="text-draft-help" className="property-note">
+                          未应用输入会跨面板保留。Escape 撤回当前输入。
+                        </p>
+                        <section className="property-section">
+                          <h3>文字样式</h3>
+                          <div className="readonly-row">
+                            <span>字号</span>
+                            <span>{textElement.style?.fontSize ?? 32} px</span>
+                          </div>
+                          <div className="readonly-row">
+                            <span>颜色</span>
+                            <span className="color-value">
+                              <i style={{ background: textElement.style?.color ?? '#172033' }} />
+                              {textElement.style?.color ?? '#172033'}
+                            </span>
+                          </div>
+                          <p className="property-note">样式仅显示；本轮尚未接入样式修改。</p>
+                        </section>
+                      </form>
+                    ) : (
+                      <>
+                        <h3>形状</h3>
+                        <div className="readonly-row">
+                          <span>填充</span>
+                          <span className="color-value">
+                            <i
+                              style={{
+                                background:
+                                  selected.kind === 'shape'
+                                    ? (selected.fill ?? '#4677e8')
+                                    : '#e6e9ee',
+                              }}
+                            />
+                            {selected.kind === 'shape' ? (selected.fill ?? '#4677e8') : '图像占位'}
+                          </span>
+                        </div>
+                        <p className="property-note">
+                          颜色、旋转和尺寸编辑尚未接入。使用「排列」查看位置并移动对象。
+                        </p>
+                      </>
+                    )
+                  ) : (
+                    <>
+                      <h3>
+                        位置与尺寸 <span className="tiny muted">px</span>
+                      </h3>
+                      <div className="geometry-grid">
+                        {(['x', 'y', 'width', 'height'] as const).map((key) => (
+                          <div key={key}>
+                            <span>
+                              {key === 'width' ? '宽' : key === 'height' ? '高' : key.toUpperCase()}
+                            </span>
+                            <output>{Math.round(selected.geometry[key])}</output>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="move-pad" aria-label="移动选中对象">
+                        <button
+                          disabled={busy}
+                          aria-label="向左移动10像素"
+                          onClick={() => void move(selected.geometry.x - 10, selected.geometry.y)}
+                        >
+                          ←
+                        </button>
+                        <button
+                          disabled={busy}
+                          aria-label="向上移动10像素"
+                          onClick={() => void move(selected.geometry.x, selected.geometry.y - 10)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          disabled={busy}
+                          aria-label="向下移动10像素"
+                          onClick={() => void move(selected.geometry.x, selected.geometry.y + 10)}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          disabled={busy}
+                          aria-label="向右移动10像素"
+                          onClick={() => void move(selected.geometry.x + 10, selected.geometry.y)}
+                        >
+                          →
+                        </button>
+                      </div>
+                      <p className="property-note">支持拖动与键盘微调；宽高只读，缩放尚未接入。</p>
+                    </>
+                  )
+                ) : (
+                  <>
+                    <h2>留出空间，给好想法。</h2>
+                    <p className="inspector-help">选择文字或形状，查看和编辑它的属性。</p>
+                  </>
+                )}
+                <section className="property-section">
+                  <button
+                    data-testid="demo-delete-element"
+                    className="destructive full"
+                    disabled={busy || !selected}
+                    onClick={() => void removeElement()}
+                  >
+                    <Icon name="trash" />
+                    删除对象
+                  </button>
+                  <button
+                    data-testid="demo-delete-slide"
+                    className="subtle full"
+                    disabled={busy || (document?.slides.length ?? 0) <= 1}
+                    onClick={() => showModal('delete-slide')}
+                  >
+                    删除当前幻灯片
+                  </button>
+                </section>
+              </>
+            )}
+          </div>
         </aside>
       </div>
-      <div className="editor-status" role="status" data-testid="document-status">
-        <span className="status-dot" aria-hidden="true" />
-        <span>{message}</span>
-      </div>
+      <footer className="statusbar">
+        <span>Demo 0.2A · 本地文档</span>
+        <output role="status" aria-live="polite" data-testid="document-status">
+          {message}
+        </output>
+        <span className="status-end">{fileStatus?.fileName ?? '尚未命名的文件'}</span>
+        <button
+          data-testid="document-reload"
+          disabled={busy}
+          onClick={() => setReload((value) => value + 1)}
+        >
+          读取最新
+        </button>
+        <output className="sr-only" data-testid="document-revision">
+          {document?.revision ?? '—'}
+        </output>
+      </footer>
+      <dialog
+        ref={dialogRef}
+        aria-labelledby="studio-dialog-title"
+        onCancel={() => setModal(null)}
+        onClose={() => {
+          setModal(null);
+          pendingFocus.current = invoker.current;
+        }}
+      >
+        <h2 id="studio-dialog-title">
+          {modal === 'menu'
+            ? '文档与工作区'
+            : modal === 'save-drafts'
+              ? '还有未应用的文本输入'
+              : modal === 'open-drafts'
+                ? '保留当前输入，还是打开文件？'
+                : '删除当前幻灯片？'}
+        </h2>
+        {modal === 'menu' ? (
+          <div className="menu-list">
+            <button disabled={busy} onClick={() => void fileAction('openDocument')}>
+              <Icon name="folder" />
+              打开本地文件<span>Ctrl / Cmd + O</span>
+            </button>
+            <button disabled={busy} onClick={() => void fileAction('saveDocument')}>
+              <Icon name="save" />
+              保存本地文件<span>Ctrl / Cmd + S</span>
+            </button>
+            <p className="property-note">
+              方向键移动 1 px；Shift + 方向键移动 10 px。输入框保留原生编辑快捷键。
+            </p>
+          </div>
+        ) : (
+          <p>
+            {modal === 'save-drafts'
+              ? '应用所有待提交文本后保存到磁盘。保存取消或失败时，已应用的修改仍保留在当前文档中。'
+              : modal === 'open-drafts'
+                ? '只有成功打开文件后才清除当前输入。取消文件选择会完整保留草稿。'
+                : '本轮暂不支持从界面撤销此操作。其他幻灯片会保留。'}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button onClick={closeModal}>取消</button>
+          {modal === 'save-drafts' ? (
+            <button className="primary" onClick={() => void fileAction('saveDocument', true)}>
+              应用文本并保存
+            </button>
+          ) : modal === 'open-drafts' ? (
+            <button className="primary" onClick={() => void fileAction('openDocument', true)}>
+              继续选择文件
+            </button>
+          ) : modal === 'delete-slide' ? (
+            <button
+              className="primary"
+              onClick={() => {
+                closeModal();
+                void deleteSlide();
+              }}
+            >
+              确认删除
+            </button>
+          ) : null}
+        </div>
+      </dialog>
     </section>
   );
 }

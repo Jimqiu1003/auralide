@@ -1,0 +1,476 @@
+{
+  "schemaVersion": "1.0",
+  "id": "pres_studio",
+  "title": "创作手记 · Auralide",
+  "revision": 0,
+  "slideSize": {
+    "width": 1280,
+    "height": 720
+  },
+  "slides": [
+    {
+      "id": "slide_cover",
+      "name": "封面",
+      "backgroundColor": "#f6f3ec",
+      "elements": [
+        {
+          "id": "el_cover_edition",
+          "kind": "text",
+          "text": "AURALIDE  /  CREATIVE NOTES",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "color": "#5b625f",
+            "align": "left"
+          },
+          "name": "刊头",
+          "geometry": {
+            "x": 68,
+            "y": 56,
+            "width": 700,
+            "height": 30
+          }
+        },
+        {
+          "id": "el_cover_title",
+          "kind": "text",
+          "text": "把想法，变成\n下一次出发。",
+          "style": {
+            "fontSize": 70,
+            "fontWeight": 600,
+            "color": "#253447",
+            "align": "left"
+          },
+          "name": "主标题",
+          "geometry": {
+            "x": 68,
+            "y": 178,
+            "width": 770,
+            "height": 190
+          }
+        },
+        {
+          "id": "el_cover_subtitle",
+          "kind": "text",
+          "text": "从一个灵感，到一场值得分享的演示。\n自由表达，也让每一次修改清晰可见。",
+          "style": {
+            "fontSize": 24,
+            "fontWeight": 400,
+            "color": "#5b625f",
+            "align": "left"
+          },
+          "name": "副标题",
+          "geometry": {
+            "x": 72,
+            "y": 431,
+            "width": 700,
+            "height": 90
+          }
+        },
+        {
+          "id": "el_cover_orange",
+          "kind": "shape",
+          "shape": "rectangle",
+          "fill": "#cf6a42",
+          "name": "暖橙色块",
+          "geometry": {
+            "x": 916,
+            "y": 100,
+            "width": 250,
+            "height": 332
+          }
+        },
+        {
+          "id": "el_cover_navy",
+          "kind": "shape",
+          "shape": "rectangle",
+          "fill": "#2d4355",
+          "name": "深蓝色块",
+          "geometry": {
+            "x": 850,
+            "y": 388,
+            "width": 250,
+            "height": 170
+          }
+        },
+        {
+          "id": "el_cover_circle",
+          "kind": "shape",
+          "shape": "ellipse",
+          "fill": "#f1c6a7",
+          "name": "圆形",
+          "geometry": {
+            "x": 1000,
+            "y": 150,
+            "width": 116,
+            "height": 116
+          }
+        },
+        {
+          "id": "el_cover_caption",
+          "kind": "text",
+          "text": "IDEAS\nIN MOTION.",
+          "style": {
+            "fontSize": 24,
+            "fontWeight": 500,
+            "color": "#111827",
+            "align": "left"
+          },
+          "name": "图形注释",
+          "geometry": {
+            "x": 945,
+            "y": 302,
+            "width": 210,
+            "height": 80
+          }
+        },
+        {
+          "id": "el_cover_footer",
+          "kind": "text",
+          "text": "本地创作  ·  开放表达",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "color": "#5b625f",
+            "align": "left"
+          },
+          "name": "页脚",
+          "geometry": {
+            "x": 72,
+            "y": 643,
+            "width": 600,
+            "height": 28
+          }
+        },
+        {
+          "id": "el_cover_page",
+          "kind": "text",
+          "text": "01 — 03",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": 400,
+            "color": "#5b625f",
+            "align": "left"
+          },
+          "name": "页码",
+          "geometry": {
+            "x": 1085,
+            "y": 642,
+            "width": 130,
+            "height": 28
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide_principles",
+      "name": "三个创作原则",
+      "backgroundColor": "#f6f3ec",
+      "elements": [
+        {
+          "id": "el_principles_section",
+          "kind": "text",
+          "text": "01 / THE WAY WE CREATE",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "color": "#5b625f",
+            "align": "left"
+          },
+          "name": "章节",
+          "geometry": {
+            "x": 68,
+            "y": 54,
+            "width": 700,
+            "height": 30
+          }
+        },
+        {
+          "id": "el_principles_title",
+          "kind": "text",
+          "text": "让创作回到内容本身。",
+          "style": {
+            "fontSize": 58,
+            "fontWeight": 600,
+            "color": "#253447",
+            "align": "left"
+          },
+          "name": "主标题",
+          "geometry": {
+            "x": 68,
+            "y": 125,
+            "width": 1140,
+            "height": 100
+          }
+        },
+        {
+          "id": "el_principles_rule",
+          "kind": "shape",
+          "shape": "rectangle",
+          "fill": "#adb4ad",
+          "name": "分隔线",
+          "geometry": {
+            "x": 72,
+            "y": 256,
+            "width": 1136,
+            "height": 2
+          }
+        },
+        {
+          "id": "el_principles_n1",
+          "kind": "text",
+          "text": "01",
+          "style": {
+            "fontSize": 42,
+            "fontWeight": 500,
+            "color": "#b14c27",
+            "align": "left"
+          },
+          "name": "原则一编号",
+          "geometry": {
+            "x": 72,
+            "y": 315,
+            "width": 100,
+            "height": 70
+          }
+        },
+        {
+          "id": "el_principles_h1",
+          "kind": "text",
+          "text": "自由表达",
+          "style": {
+            "fontSize": 34,
+            "fontWeight": 600,
+            "color": "#253447",
+            "align": "left"
+          },
+          "name": "原则一标题",
+          "geometry": {
+            "x": 72,
+            "y": 412,
+            "width": 310,
+            "height": 60
+          }
+        },
+        {
+          "id": "el_principles_p1",
+          "kind": "text",
+          "text": "文字、图形与布局，\n为你的想法留出空间。",
+          "style": {
+            "fontSize": 23,
+            "fontWeight": 400,
+            "color": "#5b625f",
+            "align": "left"
+          },
+          "name": "原则一内容",
+          "geometry": {
+            "x": 72,
+            "y": 490,
+            "width": 310,
+            "height": 90
+          }
+        },
+        {
+          "id": "el_principles_n2",
+          "kind": "text",
+          "text": "02",
+          "style": {
+            "fontSize": 42,
+            "fontWeight": 500,
+            "color": "#b14c27",
+            "align": "left"
+          },
+          "name": "原则二编号",
+          "geometry": {
+            "x": 470,
+            "y": 315,
+            "width": 100,
+            "height": 70
+          }
+        },
+        {
+          "id": "el_principles_h2",
+          "kind": "text",
+          "text": "始终在本地",
+          "style": {
+            "fontSize": 34,
+            "fontWeight": 600,
+            "color": "#253447",
+            "align": "left"
+          },
+          "name": "原则二标题",
+          "geometry": {
+            "x": 470,
+            "y": 412,
+            "width": 320,
+            "height": 60
+          }
+        },
+        {
+          "id": "el_principles_p2",
+          "kind": "text",
+          "text": "文件属于你。\n灵感不必等待网络连接。",
+          "style": {
+            "fontSize": 23,
+            "fontWeight": 400,
+            "color": "#5b625f",
+            "align": "left"
+          },
+          "name": "原则二内容",
+          "geometry": {
+            "x": 470,
+            "y": 490,
+            "width": 320,
+            "height": 90
+          }
+        },
+        {
+          "id": "el_principles_n3",
+          "kind": "text",
+          "text": "03",
+          "style": {
+            "fontSize": 42,
+            "fontWeight": 500,
+            "color": "#b14c27",
+            "align": "left"
+          },
+          "name": "原则三编号",
+          "geometry": {
+            "x": 867,
+            "y": 315,
+            "width": 100,
+            "height": 70
+          }
+        },
+        {
+          "id": "el_principles_h3",
+          "kind": "text",
+          "text": "清晰的每一步",
+          "style": {
+            "fontSize": 34,
+            "fontWeight": 600,
+            "color": "#253447",
+            "align": "left"
+          },
+          "name": "原则三标题",
+          "geometry": {
+            "x": 867,
+            "y": 412,
+            "width": 340,
+            "height": 60
+          }
+        },
+        {
+          "id": "el_principles_p3",
+          "kind": "text",
+          "text": "人和 Agent 共同创作，\n所有改变都应该可理解。",
+          "style": {
+            "fontSize": 23,
+            "fontWeight": 400,
+            "color": "#5b625f",
+            "align": "left"
+          },
+          "name": "原则三内容",
+          "geometry": {
+            "x": 867,
+            "y": 490,
+            "width": 340,
+            "height": 90
+          }
+        }
+      ]
+    },
+    {
+      "id": "slide_next",
+      "name": "下一步，一起出发",
+      "backgroundColor": "#2d4355",
+      "elements": [
+        {
+          "id": "el_next_section",
+          "kind": "text",
+          "text": "02 / WHAT COMES NEXT",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "color": "#d0dbdf",
+            "align": "left"
+          },
+          "name": "章节",
+          "geometry": {
+            "x": 68,
+            "y": 56,
+            "width": 700,
+            "height": 30
+          }
+        },
+        {
+          "id": "el_next_title",
+          "kind": "text",
+          "text": "好的工具，\n让想法走得更远。",
+          "style": {
+            "fontSize": 66,
+            "fontWeight": 600,
+            "color": "#fff6e9",
+            "align": "left"
+          },
+          "name": "主标题",
+          "geometry": {
+            "x": 68,
+            "y": 180,
+            "width": 1100,
+            "height": 200
+          }
+        },
+        {
+          "id": "el_next_accent",
+          "kind": "shape",
+          "shape": "rectangle",
+          "fill": "#e6a27e",
+          "name": "强调线",
+          "geometry": {
+            "x": 72,
+            "y": 442,
+            "width": 140,
+            "height": 6
+          }
+        },
+        {
+          "id": "el_next_subtitle",
+          "kind": "text",
+          "text": "从这一页开始。",
+          "style": {
+            "fontSize": 28,
+            "fontWeight": 400,
+            "color": "#d0dbdf",
+            "align": "left"
+          },
+          "name": "副标题",
+          "geometry": {
+            "x": 72,
+            "y": 492,
+            "width": 800,
+            "height": 70
+          }
+        },
+        {
+          "id": "el_next_footer",
+          "kind": "text",
+          "text": "AURALIDE  /  YOUR NEXT PRESENTATION",
+          "style": {
+            "fontSize": 16,
+            "fontWeight": 500,
+            "color": "#d0dbdf",
+            "align": "left"
+          },
+          "name": "页脚",
+          "geometry": {
+            "x": 72,
+            "y": 644,
+            "width": 1000,
+            "height": 30
+          }
+        }
+      ]
+    }
+  ]
+}

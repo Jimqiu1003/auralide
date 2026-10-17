@@ -1,19 +1,26 @@
 # @auralide/desktop
 
-Electron shell for Auralide. P1 includes runtime diagnostics and a small text-only slide workbench
-to prove the Core boundary (ADR-0002, P1 plan). Main owns an in-memory document; the renderer reads
-it and applies `element.updateText` through the validated bridge. Reload document recovers from
-stale revisions or a failed read. Closing the application discards this sample session; there is
-no import/export, asset loading or full canvas editor yet. P2A adds **Save document** / **Open document**
-through main-owned native dialogs, failure-safe JSON snapshots and recovery backups. Reopen resets
-undo history and advances the session revision; save does not. Unsaved open/close requires explicit
-discard confirmation. Core remains the only ordinary editing path.
+A2 · Studio Productivity 正式桌面 Shell。文档由主进程持有，所有编辑通过 Core
+Dispatcher 和 expectedRevision；文件路径只来自主进程原生对话框。
+
+支持切换/增删幻灯片、插入文本/矩形/椭圆、对象及图层选择、修改文本、拖动和键盘移动、
+保存/重新打开、Light/Dark/System，以及原生隔离 Aura 工作区。文档 Undo/Redo、样式修改、
+对象缩放、Agent Apply 和联网研究尚未接入，对应控件禁用。图片仍为占位，不加载外部资产。
+
+文字在右侧修改后点击「应用文本修改」；双击画布文字可定位到该输入框。
+草稿跨切页/对象/Aura 保留；Escape 撤回当前输入。保存时可明确选择应用所有草稿并保存。
+Ctrl/Cmd+S 保存，Ctrl/Cmd+O 打开；方向键移动 1px，Shift+方向键移动 10px，Delete 删除选中对象。
+输入框保留原生文本快捷键。关闭未应用输入或未保存文档时需要明确放弃。
+
+可打开仓库内 [真实示例文档](../../docs/examples/studio-notes.auralide.json)，另存或修改前先复制到自己的目录。
+关闭后重新启动，通过「打开」选择此前保存的文件。没有自动恢复最近文件或自动保存承诺。
+
+[本轮交付与视觉验证](../../docs/reports/demo-v02-shell-report.md)。
 
 ## Run
 
 ```powershell
-pnpm --filter @auralide/core build      # or `pnpm build` at the repository root (turbo builds deps first)
-pnpm --filter @auralide/desktop build   # tsc main + vite preload (preload.cjs) + vite renderer
+pnpm build                            # 在仓库根目录构建全部依赖及桌面应用
 pnpm --filter @auralide/desktop start   # production load path: file://dist/renderer/index.html
 ```
 
@@ -40,7 +47,9 @@ pnpm --filter @auralide/desktop smoke          # both modes, sequentially
 node test/smoke.electron.mjs dev               # dev only
 ```
 
-It launches a **real window** (Playwright's Electron driver), asserts the renderer, the frozen
+Security smoke explicitly loads `#diagnostics`; ordinary launches never show those probes.
+The diagnostic fragment is not linked from ordinary product menus. Developers may deliberately load
+that entry fragment; remove it and reload to return. It launches a **real window** (Playwright's Electron driver), asserts the renderer, the frozen
 preload surface, the allow-listed ping, the refusal path, the console for CSP violations, and the
 per-mode policy; then writes `test-artifacts/<mode>.png` (screenshot) and `test-artifacts/<mode>.json`
 (machine-readable evidence: checks, console log, main-process startup line). It needs a desktop
@@ -69,6 +78,31 @@ built `dist/renderer/index.html` stays strict, the served dev page carries the d
 | `error during build: Rolldown failed to resolve "@auralide/core"` | `@auralide/core` was not built. Build it first, or build through turbo (`pnpm build`), which orders dependencies.                             |
 | `vite` fails with "port already in use"                           | `strictPort: true` on purpose: another dev server is running. Stop it or change the port **and** the dev CSP together.                        |
 
-## Aura Browser POC
+## Formal Shell and persistence acceptance
 
-Run pnpm build from the repository root, then start the desktop as above. Choose **Preview Core slide** or **HTML Lab fixture**. Inspect the stable element, capture the preview, resize the pane and test a shell overlay. Edit through the existing document workbench and render again to refresh the revision. Arbitrary HTML, URLs, scripts and assets are unavailable. See [Aura architecture](../../docs/architecture/aura-browser.md) and [tool contract](../../docs/architecture/agent-browser-contract.md).
+```powershell
+# from the repository root after pnpm build
+node apps/desktop/test/persistence.electron.mjs
+node apps/desktop/test/shell.electron.mjs
+```
+
+The shell suite tests two content sizes and both themes, System following, real disk failure/cancel/
+conflict, text drafts, keyboard focus, native Aura overlay hiding and escape, and an actual process
+restart/reopen/preview. Native dialog choices are stubbed; Core, IPC and disk are real. CI runs both
+suites and smoke on Windows x64 and native macOS ARM64. Evidence is under `test-artifacts/`.
+
+## Aura workspace
+
+Choose 「Aura 预览」 to replace the central canvas with a native WebContentsView for the current
+slide. Left panels, selection and drafts stay in place. The controlled HTML Lab example remains
+available; arbitrary HTML/URLs/scripts/assets and Web Research remain disabled. Escape in the native
+preview returns focus to the host; 「返回编辑器」 switches workspaces. Shell dialogs hide the native
+view before opening. There is no production iframe. See [Aura architecture](../../docs/architecture/aura-browser.md).
+
+CDP renderer screenshots exclude sibling native views: the shell suite records shell and actual
+guest PNGs separately. They are labeled separately rather than passed off as a complete native capture.
+
+The unpackaged-only `--auralide-visual-test` argument permits oversized native windows on macOS CI's
+small virtual display for the exact 1280×800 / 1440×900 content-size checks. Ordinary launches retain
+the OS sizing policy; this does not grant any renderer or guest capabilities. Screen/work-area/scale
+metadata is recorded beside the shell results. These captures do not prove physical monitor fit.
