@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 permissions:
   contents: read
@@ -14,10 +13,22 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: verify
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+  platform:
+    name: desktop (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x64
+            runner: windows-2025
+            platform: win32
+            arch: x64
+          - target: macos-arm64
+            runner: macos-15
+            platform: darwin
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -30,22 +41,40 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: 24
+          architecture: ${{ matrix.arch }}
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check formatting
-        run: pnpm format:check
+      - name: Verify
+        run: pnpm verify
 
-      - name: Lint
-        run: pnpm lint
+      - name: Check platform evidence validator
+        run: node --test scripts/qa/platform-evidence.test.mjs
 
-      - name: Typecheck
-        run: pnpm typecheck
+      - name: Assert native Node, hardware and Electron identity
+        run: node scripts/qa/platform-evidence.mjs ${{ matrix.platform }} ${{ matrix.arch }}
 
-      - name: Test
-        run: pnpm test
+      - name: Desktop production and development smoke
+        run: pnpm --filter @auralide/desktop smoke
 
-      - name: Build
-        run: pnpm build
+      - name: Upload platform evidence and screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-${{ matrix.target }}-${{ github.sha }}
+          path: apps/desktop/test-artifacts/
+          if-no-files-found: warn
+
+  # Preserve the existing required check name; a failed/skipped matrix must never pass the gate.
+  verify:
+    name: verify
+    needs: platform
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both supported desktop targets
+        env:
+          PLATFORM_RESULT: ${{ needs.platform.result }}
+        run: test "$PLATFORM_RESULT" = success
