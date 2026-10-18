@@ -19,3 +19,15 @@ Status: T01 implemented and locally verified; integration/native macOS evidence 
   React Doctor changed-scope regression result recorded at final delivery.
 
 Do not infer main integration, Owner acceptance or a distributable from these local checks.
+
+## T02 — Distinct reference workspace states
+
+- Assigned branch/worktree: existing clean `docs/p15-ui-system`, PR #21; merged T01 additively.
+- Writes: `docs/design/workspace-wireframes.html`, `apps/desktop/test/wireframes.electron.mjs`, this report.
+- B Agent now places proposal review in the main stage. C Design exposes layers; C Agent exposes
+  audit; C Aura has exactly one diagnostics panel. A/B/C each have four distinct content states.
+- Before fix: strengthened Electron assertion failed B Agent main-stage content (0 instead of 1).
+- After fix: `pnpm verify` PASS; real Electron wireframes PASS across 12 states, Light/Dark/System,
+  Ctrl/Cmd hints, keyboard focus and 960px layout, with no page errors. Reference prototypes only.
+- T01 React Doctor changed-scope: 86/100; two pre-existing warnings (handler state/redundant status
+  role), no project dependency/config installed. No screen-reader or native macOS manual claim.
