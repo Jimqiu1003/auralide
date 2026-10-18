@@ -13,6 +13,8 @@ export const IPC = {
   ping: 'auralide:ping',
   getDocument: 'auralide:get-document',
   applyCommand: 'auralide:apply-command',
+  saveDocument: 'auralide:save-document',
+  openDocument: 'auralide:open-document',
   auraInvoke: 'auralide:aura-invoke',
   auraBounds: 'auralide:aura-bounds',
 } as const;
@@ -26,4 +28,4 @@ export const IPC_ALLOW_LIST: readonly IpcChannel[] = Object.freeze(Object.values
 export const BRIDGE_GLOBAL = 'auralide';
 
 /** Version of the bridge surface itself; bumped when the exposed API shape changes. */
-export const BRIDGE_VERSION = '1.2.0';
+export const BRIDGE_VERSION = '1.3.0';

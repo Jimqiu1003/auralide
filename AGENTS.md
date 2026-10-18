@@ -9,7 +9,7 @@
 - Architecture: Local-first, modular monorepo
 - License: Apache-2.0
 - Repository: public, <https://github.com/Jimqiu1003/auralide> (owner decision, 2026-10-15)
-- Development stage: P1.5 Platform, Aura Browser and UI Architecture
+- Development stage: P2A experimental Durable Document Foundation (on unmerged P1.5)
 - Project root: `D:\01_Projects\01_MyProjects\Auralide Dev`
 - Development team: Project Owner / Lead Engineer and Compatibility & QA Engineer
   (see `docs/agents/COLLABORATION.md`)
@@ -50,6 +50,12 @@ Architecture layers:
 - Storage: local documents, assets and history.
 
 Keep the core independent of Electron and UI frameworks.
+
+The current P2A owner instruction authorizes only validated snapshot save/reopen and its architecture
+alignment, not the full P2 editor. Read `p2-vertical-slice-plan.md`, `architecture-v2.md` and Proposed
+ADR-0005/0006. Those proposals do not supersede accepted ADRs without owner review. Direction A
+(canvas first, stable panels) is owner-selected. Run sequentially without sub-agents. Filesystem
+operations stay in main behind native dialogs; guests and external Agents receive no file grant.
 
 The completed P1 scope implements the runtime shell and the core document/command foundation described in
 `docs/architecture/p1-plan.md`. Do not build editor UI features, animation, import/export pipelines or

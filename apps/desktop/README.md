@@ -4,7 +4,10 @@ Electron shell for Auralide. P1 includes runtime diagnostics and a small text-on
 to prove the Core boundary (ADR-0002, P1 plan). Main owns an in-memory document; the renderer reads
 it and applies `element.updateText` through the validated bridge. Reload document recovers from
 stale revisions or a failed read. Closing the application discards this sample session; there is
-no save, import/export, asset loading or full canvas editor yet.
+no import/export, asset loading or full canvas editor yet. P2A adds **Save document** / **Open document**
+through main-owned native dialogs, failure-safe JSON snapshots and recovery backups. Reopen resets
+undo history and advances the session revision; save does not. Unsaved open/close requires explicit
+discard confirmation. Core remains the only ordinary editing path.
 
 ## Run
 

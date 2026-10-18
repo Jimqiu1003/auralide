@@ -20,6 +20,25 @@ Status: T01 implemented and locally verified; integration/native macOS evidence 
 
 Do not infer main integration, Owner acceptance or a distributable from these local checks.
 
+## T03 — Closed-window document lifecycle
+
+- Assigned branch/worktree: existing clean `feat/p2a-durable-documents`, PR #23; merged T01/T02.
+- Writes: main/session lifecycle, existing persistence unit/Electron suites and this report.
+- Contract: Cancel preserves everything. Only native `closed` ends the session; a later activation
+  starts a clean welcome document, empty history and no old file binding at a newer revision.
+  Pending native file operations still block close. Disk content is never rewritten by discard.
+- Unit checks cover clean reset, revision fencing, cancelled fresh Save and unchanged disk bytes.
+- Real persistence test now waits for native window closure, keeps the process alive, activates a
+  new window and verifies discarded content does not return and the previous file grant is gone.
+  Windows simulates only macOS's keep-alive policy; actual macOS execution remains a CI gate.
+- Local `pnpm verify` PASS; persistence 25/25 PASS. Initial lifecycle test raced renderer teardown
+  against native `closed`; it now awaits the actual native event, not a fixed delay. Activation
+  cannot replace a main window that is still being closed. No diagnostic logging retained.
+
+T01 native CI initially caught a renderer-selection assertion before React committed its update.
+The assertion now awaits the selected state with the existing bounded wait; it still fails for the
+original bug. This is synchronization, not removal of the regression assertion.
+
 ## T02 — Distinct reference workspace states
 
 - Assigned branch/worktree: existing clean `docs/p15-ui-system`, PR #21; merged T01 additively.

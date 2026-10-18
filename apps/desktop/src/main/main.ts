@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell } from 'electron';
 import type { IpcMainInvokeEvent, WebContents } from 'electron';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -7,7 +7,15 @@ import { z } from 'zod';
 import type { LoadPath, PingResponse, RuntimeInfo } from '../shared/api.js';
 import { IPC, IPC_ALLOW_LIST } from '../shared/channels.js';
 import { describeIssues, pingRequestSchema } from '../shared/schemas.js';
-import { dispatchDocumentCommand, getDocument } from './document-session.js';
+import {
+  dispatchDocumentCommand,
+  endDocumentSession,
+  getDocument,
+  hasUnsavedChanges,
+  isDocumentFileOperationPending,
+  openDocumentFile,
+  saveDocumentFile,
+} from './document-session.js';
 import { applicationMenuTemplate } from './platform.js';
 import { BrowserController } from '../aura/browser-controller.js';
 import { isTrustedRendererUrl, validateDevServerUrl } from './security.js';
@@ -161,6 +169,24 @@ const createWindow = (): BrowserWindow => {
 
   guardContents(window.webContents);
   aura = new BrowserController(window, getDocument);
+  window.on('close', (event) => {
+    if (isDocumentFileOperationPending()) {
+      event.preventDefault();
+      return;
+    }
+    if (
+      hasUnsavedChanges() &&
+      dialog.showMessageBoxSync(window, {
+        type: 'warning',
+        message: 'Discard unsaved changes and close?',
+        buttons: ['Cancel', 'Discard and close'],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      }) !== 1
+    )
+      event.preventDefault();
+  });
 
   window.once('ready-to-show', () => {
     window.show();
@@ -171,6 +197,7 @@ const createWindow = (): BrowserWindow => {
       aura?.dispose();
       aura = null;
       mainWindow = null;
+      endDocumentSession();
     }
   });
 
@@ -212,6 +239,44 @@ if (!app.requestSingleInstanceLock()) {
     handle(IPC.runtimeInfo, z.tuple([]), () => runtimeInfo());
     handle(IPC.ping, z.tuple([z.unknown()]), ([payload]) => handlePing(payload));
     handle(IPC.getDocument, z.tuple([]), () => getDocument());
+    handle(IPC.saveDocument, z.tuple([z.unknown()]), ([request]) =>
+      saveDocumentFile(request, async () => {
+        if (mainWindow === null) return null;
+        const result = await dialog.showSaveDialog(mainWindow, {
+          title: 'Save Auralide document',
+          defaultPath: 'presentation.auralide.json',
+          filters: [{ name: 'Auralide document', extensions: ['json'] }],
+          properties: ['showOverwriteConfirmation'],
+        });
+        return result.canceled ? null : (result.filePath ?? null);
+      }),
+    );
+    handle(IPC.openDocument, z.tuple([z.unknown()]), ([request]) =>
+      openDocumentFile(
+        request,
+        async () => {
+          if (mainWindow === null) return null;
+          const result = await dialog.showOpenDialog(mainWindow, {
+            title: 'Open Auralide document',
+            filters: [{ name: 'Auralide document', extensions: ['json'] }],
+            properties: ['openFile'],
+          });
+          return result.canceled ? null : (result.filePaths[0] ?? null);
+        },
+        async () => {
+          if (mainWindow === null) return false;
+          const result = await dialog.showMessageBox(mainWindow, {
+            type: 'warning',
+            message: 'Discard unsaved changes and open this document?',
+            buttons: ['Cancel', 'Discard and open'],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+          });
+          return result.response === 1;
+        },
+      ),
+    );
     handle(IPC.applyCommand, z.tuple([z.unknown()]), ([command]) =>
       dispatchDocumentCommand(command),
     );
@@ -234,7 +299,7 @@ if (!app.requestSingleInstanceLock()) {
     mainWindow = createWindow();
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
+      if (mainWindow === null && BrowserWindow.getAllWindows().length === 0) {
         mainWindow = createWindow();
       }
     });
