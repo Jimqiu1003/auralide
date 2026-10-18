@@ -5,11 +5,11 @@
 - Project: Auralide
 - Product: AI-Native HTML Presentation Editor
 - Language: TypeScript (strict)
-- Primary platform: Windows desktop
+- First-release platforms: Windows x64 and macOS ARM64 (ADR-0003)
 - Architecture: Local-first, modular monorepo
 - License: Apache-2.0
 - Repository: public, <https://github.com/Jimqiu1003/auralide> (owner decision, 2026-10-15)
-- Development stage: P1 Runtime & Core Foundation
+- Development stage: P1.5 Platform, Aura Browser and UI Architecture
 - Project root: `D:\01_Projects\01_MyProjects\Auralide Dev`
 - Development team: Project Owner / Lead Engineer and Compatibility & QA Engineer
   (see `docs/agents/COLLABORATION.md`)
@@ -51,9 +51,9 @@ Architecture layers:
 
 Keep the core independent of Electron and UI frameworks.
 
-During P1, implement the runtime shell and the core document/command foundation described in
+The completed P1 scope implements the runtime shell and the core document/command foundation described in
 `docs/architecture/p1-plan.md`. Do not build editor UI features, animation, import/export pipelines or
-collaboration features: P1 is about a safe runtime and a trustworthy model.
+collaboration features: P1 is about a safe runtime and a trustworthy model. P1.5 extends this with the owner-authorized isolated Aura Browser POC, platform adapters/CI and design proposals (ADR-0003/0004). Full editor UI awaits owner selection. The current owner instruction is single-agent execution; do not spawn sub-agents.
 
 ## 3. Source of Truth
 

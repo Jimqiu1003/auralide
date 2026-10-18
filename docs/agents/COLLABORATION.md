@@ -11,7 +11,7 @@ remains the repository-wide rule set.
 | Person                        | Role                                                    | GitHub        | Owns                                                                   |
 | ----------------------------- | ------------------------------------------------------- | ------------- | ---------------------------------------------------------------------- |
 | Project Owner / Lead Engineer | product, architecture, core, integration                | `@Jimqiu1003` | `packages/core`, `apps/**`, shared configuration, CI, ADRs, phase docs |
-| Compatibility & QA Engineer   | HTML test corpus, compatibility matrix, automated tests | _to be added_ | `tests/fixtures/html/**`, `docs/qa/**`, approved E2E directories       |
+| Compatibility & QA Engineer   | HTML test corpus, compatibility matrix, automated tests | `@Lsc-91-69`  | `tests/fixtures/html/**`, `docs/qa/**`, approved E2E directories       |
 
 The two developers work on **different machines and different clones**. The QA engineer has no access
 to the Lead's `D:` drive, so nothing in the workflow may assume a shared local path, a shared
@@ -129,7 +129,9 @@ is hidden is a defect.
 ## 8. Phase status
 
 - **P0 (done, frozen):** infrastructure bootstrap. See `docs/reports/P0-bootstrap-report.md`.
-- **P1 (current):** runtime and core foundation — a really starting Electron shell with a safe
+- **P1 (merged, PR #14):** runtime and core foundation — a really starting Electron shell with a safe
   preload/IPC boundary, and the first structured document model plus command dispatcher. Plan:
   `docs/architecture/p1-plan.md`; decisions: `ADR-0002`. The QA engineer starts their own workstream
   in parallel on the zones listed above.
+
+- **P1.5 (current):** Issues #15–#18. Lead writes runtime/platform/design work sequentially; no sub-agents under the current owner instruction. QA @Lsc-91-69 owns independent compatibility work through #18. No QA fixtures or docs are modified by the runtime workstream. Owner approval is required before full UI implementation and before any PR merge.

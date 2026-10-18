@@ -3,6 +3,66 @@
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
 
+.aura-poc {
+  width: 100%;
+}
+.aura-poc h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+.aura-poc p {
+  color: #b9c6e4;
+  font-size: 0.85rem;
+}
+.aura-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.6rem 0;
+}
+.aura-controls button {
+  font: inherit;
+  background: #26262e;
+  color: #f4f4f5;
+  border: 1px solid #636b82;
+  border-radius: 5px;
+  padding: 0.4rem 0.65rem;
+  cursor: pointer;
+}
+.aura-controls button[aria-pressed='true'] {
+  border-color: #b9c6e4;
+}
+.aura-surface {
+  height: 280px;
+  background: #171b2b;
+  border: 1px solid #636b82;
+  box-sizing: border-box;
+  color: #a1a1aa;
+  overflow: hidden;
+}
+.aura-output {
+  display: block;
+  overflow-wrap: anywhere;
+  max-height: 7rem;
+  overflow: auto;
+  font-size: 0.8rem;
+  color: #b9c6e4;
+}
+.aura-capture {
+  display: block;
+  max-width: 320px;
+}
+dialog {
+  color: #f4f4f5;
+  background: #171b2b;
+  border: 1px solid #b9c6e4;
+  border-radius: 8px;
+}
+dialog::backdrop {
+  background: #0009;
+}
+
 body {
   margin: 0;
   background: #101014;
