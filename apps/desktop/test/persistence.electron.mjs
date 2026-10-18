@@ -223,13 +223,44 @@ try {
   await app.evaluate(({ dialog }) => {
     dialog.showMessageBoxSync = () => 1;
   });
-  await closeSavedWindow(page);
+  const discardedRevision = (await page.evaluate(() => window.auralide.getDocument())).revision;
+  const closed = page.waitForEvent('close');
+  await app.evaluate(async ({ app, BrowserWindow }) => {
+    // Exercise macOS's keep-process-alive lifecycle on Windows too, only in this test process.
+    if (process.platform !== 'darwin') app.removeAllListeners('window-all-closed');
+    const window = BrowserWindow.getAllWindows()[0];
+    await new Promise((resolve) => {
+      window.once('closed', resolve);
+      window.close();
+    });
+  });
+  await closed;
   check('explicit discard closes window', page.isClosed(), true);
+  const activated = app.waitForEvent('window');
+  await app.evaluate(({ app }) => app.emit('activate'));
+  page = await activated;
+  await page.getByTestId('document-text-input').waitFor();
+  const fresh = await page.evaluate(() => window.auralide.getDocument());
+  check(
+    'reactivation does not revive discarded text',
+    fresh.slides[0].elements[0].text,
+    'Your ideas, structured.',
+  );
+  check('reactivation fences old revisions', fresh.revision > discardedRevision, true);
+  await app.evaluate(({ dialog }) => {
+    dialog.showSaveDialog = async () => ({ canceled: true, filePath: undefined });
+  });
+  const freshSave = await page.evaluate(
+    (revision) => window.auralide.saveDocument({ expectedRevision: revision }),
+    fresh.revision,
+  );
+  check('reactivation clears previous file grant', freshSave.error?.code, 'cancelled');
   check(
     'discard does not overwrite saved file',
     JSON.parse(await readFile(path, 'utf8')).slides[0].elements[0].text,
     saved.slides[0].elements[0].text,
   );
+  await closeSavedWindow(page);
   await writeFile(
     join(artifacts, 'persistence.json'),
     JSON.stringify(

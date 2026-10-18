@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   dispatchDocumentCommand,
+  endDocumentSession,
   getDocument,
   hasUnsavedChanges,
   openDocumentFile,
@@ -93,6 +94,24 @@ describe('application file policy', () => {
         await openDocumentFile({ expectedRevision: current.revision }, choose, async () => true),
       ).toMatchObject({ ok: false, error: { code: 'revision-limit' } });
       expect(getDocument()).toBe(current);
+      const bytesBeforeClose = await fs.readFile(path, 'utf8');
+      endDocumentSession();
+      expect(hasUnsavedChanges()).toBe(false);
+      expect(getDocument().slides).toEqual(before.slides);
+      expect(getDocument().revision).toBeGreaterThan(current.revision);
+      expect(
+        dispatchDocumentCommand({ ...command, expectedRevision: current.revision }),
+      ).toMatchObject({
+        ok: false,
+        error: { code: 'stale-revision' },
+      });
+      expect(
+        await saveDocumentFile({ expectedRevision: getDocument().revision }, async () => null),
+      ).toMatchObject({
+        ok: false,
+        error: { code: 'cancelled' },
+      });
+      expect(await fs.readFile(path, 'utf8')).toBe(bytesBeforeClose);
     } finally {
       await fs.rm(directory, { recursive: true });
     }

@@ -9,6 +9,7 @@ import { IPC, IPC_ALLOW_LIST } from '../shared/channels.js';
 import { describeIssues, pingRequestSchema } from '../shared/schemas.js';
 import {
   dispatchDocumentCommand,
+  endDocumentSession,
   getDocument,
   hasUnsavedChanges,
   isDocumentFileOperationPending,
@@ -196,6 +197,7 @@ const createWindow = (): BrowserWindow => {
       aura?.dispose();
       aura = null;
       mainWindow = null;
+      endDocumentSession();
     }
   });
 
@@ -297,7 +299,7 @@ if (!app.requestSingleInstanceLock()) {
     mainWindow = createWindow();
 
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
+      if (mainWindow === null && BrowserWindow.getAllWindows().length === 0) {
         mainWindow = createWindow();
       }
     });

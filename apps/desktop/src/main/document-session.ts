@@ -21,37 +21,46 @@ import {
 } from './document-files.js';
 
 // shortcut: undo history is session-only; persistent history needs a reviewed recovery format.
-let state = createEditorState(
-  presentationSchema.parse({
-    schemaVersion: '1.0',
-    id: 'pres_welcome',
-    title: 'Welcome to Auralide',
-    revision: 0,
-    slideSize: { width: 1280, height: 720 },
-    slides: [
-      {
-        id: 'slide_welcome',
-        name: 'Welcome',
-        backgroundColor: '#171b2b',
-        elements: [
-          {
-            id: 'el_title',
-            kind: 'text',
-            text: 'Your ideas, structured.',
-            geometry: { x: 96, y: 240, width: 1088, height: 160 },
-            style: { fontSize: 64, color: '#f4f4f5', fontWeight: 600 },
-          },
-        ],
-      },
-    ],
-  }),
-);
+const welcomeDocument = presentationSchema.parse({
+  schemaVersion: '1.0',
+  id: 'pres_welcome',
+  title: 'Welcome to Auralide',
+  revision: 0,
+  slideSize: { width: 1280, height: 720 },
+  slides: [
+    {
+      id: 'slide_welcome',
+      name: 'Welcome',
+      backgroundColor: '#171b2b',
+      elements: [
+        {
+          id: 'el_title',
+          kind: 'text',
+          text: 'Your ideas, structured.',
+          geometry: { x: 96, y: 240, width: 1088, height: 160 },
+          style: { fontSize: 64, color: '#f4f4f5', fontWeight: 600 },
+        },
+      ],
+    },
+  ],
+});
+let state = createEditorState(welcomeDocument);
 let savedDocument = state.document;
 let fileBinding: { path: string; stamp: string } | null = null;
 let fileOperation = false;
 const fileRequestSchema = z.strictObject({ expectedRevision: revisionSchema });
 
 export const getDocument = (): Presentation => state.document;
+
+/** End a closed window's session without reviving discarded content on macOS activation. */
+export const endDocumentSession = (): void => {
+  state = createEditorState({
+    ...welcomeDocument,
+    revision: Math.min(Number.MAX_SAFE_INTEGER, state.document.revision + 1),
+  });
+  savedDocument = state.document;
+  fileBinding = null;
+};
 
 export const dispatchDocumentCommand = (command: unknown): Result<Presentation, CommandError> => {
   if (fileOperation)
