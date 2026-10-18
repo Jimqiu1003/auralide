@@ -154,6 +154,13 @@ export async function auraProbes(app, page, mode, artifacts, check) {
   check('Aura lab remains inert', labDiagnostics.value?.scriptCount, 0);
   await page.getByTestId('aura-close').click();
   await wait(async () => (await snapshot()).length === 1, 'active lab closed');
+  await wait(
+    async () =>
+      (await page
+        .getByRole('button', { name: 'slide-preview', exact: true })
+        .getAttribute('aria-pressed')) === 'true',
+    'renderer selects fallback tab',
+  );
   check(
     'Aura closing active tab selects remaining preview',
     await page
