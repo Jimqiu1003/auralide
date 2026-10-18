@@ -180,6 +180,12 @@ export class BrowserController {
       },
     });
     const contents = view.webContents;
+    contents.on('before-input-event', (event, input) => {
+      if (input.type === 'keyDown' && input.key === 'Escape') {
+        event.preventDefault();
+        this.window.webContents.focus();
+      }
+    });
     contents.setWindowOpenHandler(() => ({ action: 'deny' }));
     contents.on('will-navigate', (event) => event.preventDefault());
     contents.on('will-frame-navigate', (event) => event.preventDefault());

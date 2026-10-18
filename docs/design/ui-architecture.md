@@ -18,6 +18,36 @@ Workspace choice does not change document content. Model state lives in the exis
 document service; all mutation uses Core. Shell selection state and view layout are separate.
 Only a validated capability may connect an Agent request to a document operation.
 
+### Plugin direction — owner request, 2026-10-17
+
+The owner requests a configurable, plugin-extensible desktop inspired by
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness/blob/master/docs/architecture.md).
+This records product intent; the extension API and runtime below are **Proposed, not implemented**.
+The selected A2 Studio Productivity shell remains the default workspace.
+
+- Candidate contributions: named commands/shortcuts, toolbar groups, inspector panels, workspaces,
+  import/export adapters, templates, and Agent providers. Enable/disable and configuration belong in
+  one extension settings surface. Users should not need to assemble basic editing or saving.
+- Ship essential file, editing and presentation functions with the application. First prove existing
+  module boundaries; do not introduce a framework dependency or convert everything to plugins merely
+  to match a reference product.
+- The desktop host owns windows, native dialogs, file grants and Aura WebContentsView lifecycle.
+  Plugins cannot replace validation, bypass Core Dispatcher/revision checks, or obtain editor preload
+  and Node access through imported HTML. API registration is not a security sandbox.
+- Before third-party executable plugins: specify versioned manifests, capabilities, process isolation,
+  message validation, activation/disposal, cancellation, resource limits and failure recovery. Disabling
+  an extension must unregister its UI/shortcuts and preserve documents and unsaved drafts. Unknown
+  extension data must survive a round trip without silently becoming editable native content.
+- Human and Agent contributions use the same validated command path, with identity and capability
+  checks at the trusted boundary. Provider installation does not authorize document changes.
+- Future desktop customization may reorder contributed tools and panels, with a reset to A2 defaults.
+  Arbitrary docking, marketplace/package execution and live reload are not current capabilities.
+
+Current delivery order remains files (including multi-slide single-file HTML), common editing, and
+basic presentation. Phone remote, recording, rehearsal timing and countdown are deferred by the owner.
+Follow with a separately reviewable extension contract and one bundled adapter as its vertical slice;
+only then open third-party installation. This proposal does not change accepted security decisions.
+
 ## Three substantive alternatives
 
 | Dimension                             | A — Canvas first / stable panels                                          | B — Task workspaces / progressive panels                                      | C — Research + Agent / dual surface                                                             |

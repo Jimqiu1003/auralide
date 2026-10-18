@@ -4,6 +4,8 @@ import {
   commandEnvelopeSchema,
   elementAddPayloadSchema,
   elementMovePayloadSchema,
+  elementUpdatePropertiesPayloadSchema,
+  elementReorderPayloadSchema,
   elementTargetSchema,
   elementUpdateTextPayloadSchema,
   emptyPayloadSchema,
@@ -103,6 +105,22 @@ const nextRevision = (document: Presentation): Result<number, CommandError> =>
 
 /** A validated command with its target already resolved against the current document. */
 type PendingCommand =
+  | {
+      readonly operation: 'element.updateProperties';
+      readonly target: ElementTarget;
+      readonly payload: z.output<typeof elementUpdatePropertiesPayloadSchema>;
+      readonly origin: EditOrigin;
+      readonly slide: Slide;
+      readonly element: Element;
+    }
+  | {
+      readonly operation: 'element.reorder';
+      readonly target: ElementTarget;
+      readonly payload: z.output<typeof elementReorderPayloadSchema>;
+      readonly origin: EditOrigin;
+      readonly slide: Slide;
+      readonly element: Element;
+    }
   | {
       readonly operation: 'slide.create';
       readonly target: PresentationTarget;
@@ -364,6 +382,47 @@ const resolveElementRemove = (context: CommandContext): Result<PendingCommand, C
   });
 };
 
+const resolveElementProperties = (
+  context: CommandContext,
+): Result<PendingCommand, CommandError> => {
+  const target = elementTargetSchema.safeParse(context.target);
+  if (!target.success) return err(invalidPayload('Invalid element target.'));
+  const located = resolveElement(context.document, target.data);
+  if (isErr(located)) return located;
+  const payload = elementUpdatePropertiesPayloadSchema.safeParse(context.payload);
+  if (!payload.success) return err(invalidPayload('Invalid element properties.'));
+  const kind = located.value.element.kind;
+  if (
+    (payload.data.style !== undefined && kind !== 'text') ||
+    ((payload.data.fill !== undefined || payload.data.stroke !== undefined) && kind !== 'shape')
+  )
+    return err(conflict('Properties do not match the element kind.'));
+  return ok({
+    operation: 'element.updateProperties',
+    target: target.data,
+    payload: payload.data,
+    origin: context.origin,
+    ...located.value,
+  });
+};
+
+const resolveElementReorder = (context: CommandContext): Result<PendingCommand, CommandError> => {
+  const target = elementTargetSchema.safeParse(context.target);
+  if (!target.success) return err(invalidPayload('Invalid element target.'));
+  const located = resolveElement(context.document, target.data);
+  if (isErr(located)) return located;
+  const payload = elementReorderPayloadSchema.safeParse(context.payload);
+  if (!payload.success || payload.data.index >= located.value.slide.elements.length)
+    return err(invalidPayload('Paint-order index is out of range.'));
+  return ok({
+    operation: 'element.reorder',
+    target: target.data,
+    payload: payload.data,
+    origin: context.origin,
+    ...located.value,
+  });
+};
+
 /** One resolver per operation: target shape → target existence → payload shape. */
 const COMMAND_RESOLVERS: Readonly<
   Record<CommandOperation, (context: CommandContext) => Result<PendingCommand, CommandError>>
@@ -374,6 +433,8 @@ const COMMAND_RESOLVERS: Readonly<
   'element.move': resolveElementMove,
   'element.updateText': resolveElementUpdateText,
   'element.remove': resolveElementRemove,
+  'element.updateProperties': resolveElementProperties,
+  'element.reorder': resolveElementReorder,
 };
 
 const replaceSlide = (document: Presentation, next: Slide): Presentation => ({
@@ -459,6 +520,25 @@ const execute = (
       const updated: TextElement = { ...command.element, text: command.payload.text };
 
       return ok(replaceElement(document, command.slide, command.target.elementId, updated));
+    }
+    case 'element.updateProperties': {
+      const { geometry, style, fill, stroke } = command.payload;
+      const element = command.element;
+      const updated: Element = {
+        ...element,
+        ...(geometry === undefined ? {} : { geometry }),
+        ...(element.kind === 'text' && style !== undefined
+          ? { style: { ...element.style, ...style } }
+          : {}),
+        ...(element.kind === 'shape' && fill !== undefined ? { fill } : {}),
+        ...(element.kind === 'shape' && stroke !== undefined ? { stroke } : {}),
+      };
+      return ok(replaceElement(document, command.slide, command.target.elementId, updated));
+    }
+    case 'element.reorder': {
+      const elements = command.slide.elements.filter((item) => item.id !== command.element.id);
+      elements.splice(command.payload.index, 0, command.element);
+      return ok(replaceSlide(document, { ...command.slide, elements }));
     }
     case 'element.remove':
       return ok(

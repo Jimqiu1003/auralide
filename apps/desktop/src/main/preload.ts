@@ -22,8 +22,19 @@ const api: AuralideApi = Object.freeze({
   getRuntimeInfo: (): Promise<RuntimeInfo> => ipcRenderer.invoke(IPC.runtimeInfo),
   ping: (request: PingRequest): Promise<PingResponse> => ipcRenderer.invoke(IPC.ping, request),
   getDocument: (): Promise<Presentation> => ipcRenderer.invoke(IPC.getDocument),
+  getDocumentStatus: () => ipcRenderer.invoke(IPC.getDocumentStatus),
+  editHistory: (request: Parameters<AuralideApi['editHistory']>[0]) =>
+    ipcRenderer.invoke(IPC.editHistory, request),
   saveDocument: (request: Parameters<AuralideApi['saveDocument']>[0]) =>
     ipcRenderer.invoke(IPC.saveDocument, request),
+  newDocument: (request: Parameters<AuralideApi['newDocument']>[0]) =>
+    ipcRenderer.invoke(IPC.newDocument, request),
+  saveDocumentAs: (request: Parameters<AuralideApi['saveDocumentAs']>[0]) =>
+    ipcRenderer.invoke(IPC.saveDocumentAs, request),
+  importHtml: (request: Parameters<AuralideApi['importHtml']>[0]) =>
+    ipcRenderer.invoke(IPC.importHtml, request),
+  exportHtml: (request: Parameters<AuralideApi['exportHtml']>[0]) =>
+    ipcRenderer.invoke(IPC.exportHtml, request),
   openDocument: (request: Parameters<AuralideApi['openDocument']>[0]) =>
     ipcRenderer.invoke(IPC.openDocument, request),
   applyCommand: (command: CommandEnvelope): Promise<Result<Presentation, CommandError>> =>

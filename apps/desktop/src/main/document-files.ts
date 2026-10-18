@@ -76,6 +76,17 @@ export const documentFileStamp = async (path: string): Promise<string | null> =>
     throw error;
   }
 };
+export const readTextFile = async (path: string): Promise<{ text: string; stamp: string }> => {
+  const bytes = await readBytes(path);
+  try {
+    return {
+      text: new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes),
+      stamp: hash(bytes),
+    };
+  } catch {
+    throw new DocumentFileError('invalid-document', '文件必须使用 UTF-8 编码。');
+  }
+};
 export const readDocumentFile = async (
   path: string,
 ): Promise<{ document: Presentation; stamp: string }> => {
@@ -106,7 +117,14 @@ export const writeDocumentFile = async (
   const parsed = presentationSchema.safeParse(input);
   if (!parsed.success)
     throw new DocumentFileError('invalid-document', 'Cannot save an invalid document.');
-  const bytes = Buffer.from(serializeDocument(parsed.data), 'utf8');
+  return writeTextFile(path, serializeDocument(parsed.data), expectedStamp);
+};
+export const writeTextFile = async (
+  path: string,
+  text: string,
+  expectedStamp: string | null,
+): Promise<{ stamp: string; backupCreated: boolean }> => {
+  const bytes = Buffer.from(text, 'utf8');
   if (bytes.length > MAX_BYTES)
     throw new DocumentFileError('too-large', 'P2A documents must be at most 20 MiB.');
   if ((await documentFileStamp(path)) !== expectedStamp)

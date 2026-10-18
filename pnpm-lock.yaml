@@ -218,6 +218,12 @@ importers:
       '@auralide/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@auralide/exporters':
+        specifier: workspace:*
+        version: link:../../packages/exporters
+      '@auralide/html-bridge':
+        specifier: workspace:*
+        version: link:../../packages/html-bridge
       '@auralide/renderer':
         specifier: workspace:*
         version: link:../../packages/renderer
@@ -289,6 +295,9 @@ importers:
       '@auralide/core':
         specifier: workspace:*
         version: link:../core
+      '@auralide/renderer':
+        specifier: workspace:*
+        version: link:../renderer
 
   packages/html-bridge:
     dependencies:

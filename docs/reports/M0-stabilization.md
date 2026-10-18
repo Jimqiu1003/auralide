@@ -2,7 +2,8 @@
 
 Date: 2026-10-18. Owner: Lead Engineer. Reviewer: Jim / Compatibility & QA Engineer.
 Plan: local `docs/stabilization-next-stage` at `d9a5acd` (not yet merged).
-Status: T01 implemented and locally verified; integration/native macOS evidence pending.
+Status: T01–T03 merged through #20/#21/#23; Windows x64 and native macOS ARM64 CI PASS.
+Stable main: `19a31d4b9eb9fb2f5d07f696cfc822f1af4712ad`. Historical entries below retain their initial evidence boundaries.
 
 ## T01 — Aura renderer state
 
