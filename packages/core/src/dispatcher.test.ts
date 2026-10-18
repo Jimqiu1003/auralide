@@ -109,6 +109,10 @@ const validPayload = (operation: CommandOperation): unknown => {
       return { text: 'x' };
     case 'element.remove':
       return {};
+    case 'element.updateProperties':
+      return { style: { fontSize: 40 } };
+    case 'element.reorder':
+      return { index: 1 };
   }
 };
 

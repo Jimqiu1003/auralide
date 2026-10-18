@@ -1,0 +1,18 @@
+{
+  "recordedAt": "2026-10-17T07:13:50.893Z",
+  "node": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "version": "v24.20.0",
+    "osRelease": "24.6.0"
+  },
+  "electron": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "version": "44.7.2"
+  },
+  "pass": true,
+  "uname": "arm64",
+  "arm64Hardware": "1",
+  "translated": "0"
+}

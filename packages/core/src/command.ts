@@ -1,6 +1,12 @@
 import { z } from 'zod';
 
-import { coordinateSchema, editOriginSchema, elementSchema } from './document.js';
+import {
+  coordinateSchema,
+  editOriginSchema,
+  elementSchema,
+  geometrySchema,
+  textStyleSchema,
+} from './document.js';
 import type { DeepReadonly } from './document.js';
 import { elementIdSchema, slideIdSchema } from './ids.js';
 
@@ -21,6 +27,8 @@ export const COMMAND_OPERATIONS = [
   'element.move',
   'element.updateText',
   'element.remove',
+  'element.updateProperties',
+  'element.reorder',
 ] as const;
 export type CommandOperation = (typeof COMMAND_OPERATIONS)[number];
 
@@ -75,6 +83,27 @@ export type ElementMovePayload = DeepReadonly<z.output<typeof elementMovePayload
 
 /** `element.updateText`: replaces the text of a text element. */
 export const elementUpdateTextPayloadSchema = z.strictObject({ text: z.string() });
+const literalColor = z.string().regex(/^(#[0-9a-f]{3,8}|[a-z]{1,20})$/i);
+export const elementUpdatePropertiesPayloadSchema = z
+  .strictObject({
+    geometry: geometrySchema.optional(),
+    style: textStyleSchema
+      .extend({ color: literalColor.optional() })
+      .refine(
+        (value) =>
+          Object.keys(value).length > 0 &&
+          Object.values(value).every((field) => field !== undefined),
+      )
+      .optional(),
+    fill: literalColor.optional(),
+    stroke: literalColor.optional(),
+  })
+  .refine(
+    (value) =>
+      Object.keys(value).length > 0 && Object.values(value).every((field) => field !== undefined),
+    'Defined properties are required.',
+  );
+export const elementReorderPayloadSchema = z.strictObject({ index: z.int().min(0) });
 export type ElementUpdateTextPayload = DeepReadonly<
   z.output<typeof elementUpdateTextPayloadSchema>
 >;

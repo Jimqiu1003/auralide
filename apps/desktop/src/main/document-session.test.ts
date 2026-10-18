@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { dispatchDocumentCommand, getDocument } from './document-session.js';
+import { dispatchDocumentCommand, getDocument, getDocumentStatus } from './document-session.js';
 
 describe('main-owned document session', () => {
   it('uses the dispatcher and preserves the document on invalid and stale edits', () => {
     const before = getDocument();
+    expect(getDocumentStatus()).toEqual({
+      revision: before.revision,
+      dirty: false,
+      fileName: null,
+      canUndo: false,
+      canRedo: false,
+    });
     const command = {
       operation: 'element.updateText',
       target: { kind: 'element', slideId: 'slide_welcome', elementId: 'el_title' },
@@ -19,6 +26,13 @@ describe('main-owned document session', () => {
     expect(getDocument().revision).toBe(before.revision + 1);
     expect(getDocument().slides[0]?.elements[0]).toMatchObject({ text: 'A real Core edit' });
     const changed = getDocument();
+    expect(getDocumentStatus()).toEqual({
+      revision: changed.revision,
+      dirty: true,
+      fileName: null,
+      canUndo: true,
+      canRedo: false,
+    });
     expect(dispatchDocumentCommand(command)).toMatchObject({
       ok: false,
       error: { code: 'stale-revision' },

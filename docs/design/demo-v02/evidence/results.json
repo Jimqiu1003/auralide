@@ -1,0 +1,261 @@
+{
+  "baseline": "8891a983ec6adbff8ff05a99845ca89b4a08f0b7",
+  "host": "win32",
+  "node": "v24.21.0",
+  "metrics": [
+    {
+      "variant": "baseline",
+      "viewport": [1280, 800],
+      "pageHeight": 1598,
+      "auraY": 782,
+      "canvas": { "width": 763, "height": 429.1875 }
+    },
+    {
+      "variant": "baseline",
+      "viewport": [1440, 900],
+      "pageHeight": 1598,
+      "auraY": 782,
+      "canvas": { "width": 923, "height": 519.1875 }
+    },
+    {
+      "variant": "a1",
+      "theme": "light",
+      "viewport": [1280, 800],
+      "pageHeight": 800,
+      "pageWidth": 1280,
+      "canvas": { "width": 800, "height": 450 },
+      "panels": [
+        { "x": 0, "right": 168, "y": 98, "bottom": 772 },
+        { "x": 168, "right": 1016, "y": 98, "bottom": 772 },
+        { "x": 1016, "right": 1280, "y": 98, "bottom": 772 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a1",
+      "theme": "dark",
+      "viewport": [1280, 800],
+      "pageHeight": 800,
+      "pageWidth": 1280,
+      "canvas": { "width": 800, "height": 450 },
+      "panels": [
+        { "x": 0, "right": 168, "y": 98, "bottom": 772 },
+        { "x": 168, "right": 1016, "y": 98, "bottom": 772 },
+        { "x": 1016, "right": 1280, "y": 98, "bottom": 772 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a1",
+      "theme": "light",
+      "viewport": [1440, 900],
+      "pageHeight": 900,
+      "pageWidth": 1440,
+      "canvas": { "width": 960, "height": 540 },
+      "panels": [
+        { "x": 0, "right": 168, "y": 98, "bottom": 872 },
+        { "x": 168, "right": 1176, "y": 98, "bottom": 872 },
+        { "x": 1176, "right": 1440, "y": 98, "bottom": 872 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a1",
+      "theme": "dark",
+      "viewport": [1440, 900],
+      "pageHeight": 900,
+      "pageWidth": 1440,
+      "canvas": { "width": 960, "height": 540 },
+      "panels": [
+        { "x": 0, "right": 168, "y": 98, "bottom": 872 },
+        { "x": 168, "right": 1176, "y": 98, "bottom": 872 },
+        { "x": 1176, "right": 1440, "y": 98, "bottom": 872 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a2",
+      "theme": "light",
+      "viewport": [1280, 800],
+      "pageHeight": 800,
+      "pageWidth": 1280,
+      "canvas": { "width": 776, "height": 436.5 },
+      "panels": [
+        { "x": 0, "right": 176, "y": 160, "bottom": 772 },
+        { "x": 176, "right": 992, "y": 160, "bottom": 772 },
+        { "x": 992, "right": 1280, "y": 160, "bottom": 772 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a2",
+      "theme": "dark",
+      "viewport": [1280, 800],
+      "pageHeight": 800,
+      "pageWidth": 1280,
+      "canvas": { "width": 776, "height": 436.5 },
+      "panels": [
+        { "x": 0, "right": 176, "y": 160, "bottom": 772 },
+        { "x": 176, "right": 992, "y": 160, "bottom": 772 },
+        { "x": 992, "right": 1280, "y": 160, "bottom": 772 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a2",
+      "theme": "light",
+      "viewport": [1440, 900],
+      "pageHeight": 900,
+      "pageWidth": 1440,
+      "canvas": { "width": 936, "height": 526.5 },
+      "panels": [
+        { "x": 0, "right": 176, "y": 160, "bottom": 872 },
+        { "x": 176, "right": 1152, "y": 160, "bottom": 872 },
+        { "x": 1152, "right": 1440, "y": 160, "bottom": 872 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a2",
+      "theme": "dark",
+      "viewport": [1440, 900],
+      "pageHeight": 900,
+      "pageWidth": 1440,
+      "canvas": { "width": 936, "height": 526.5 },
+      "panels": [
+        { "x": 0, "right": 176, "y": 160, "bottom": 872 },
+        { "x": 176, "right": 1152, "y": 160, "bottom": 872 },
+        { "x": 1152, "right": 1440, "y": 160, "bottom": 872 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a3",
+      "theme": "light",
+      "viewport": [1280, 800],
+      "pageHeight": 800,
+      "pageWidth": 1280,
+      "canvas": { "width": 760, "height": 427.5 },
+      "panels": [
+        { "x": 0, "right": 208, "y": 90, "bottom": 772 },
+        { "x": 208, "right": 1016, "y": 90, "bottom": 772 },
+        { "x": 1016, "right": 1280, "y": 90, "bottom": 772 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a3",
+      "theme": "dark",
+      "viewport": [1280, 800],
+      "pageHeight": 800,
+      "pageWidth": 1280,
+      "canvas": { "width": 760, "height": 427.5 },
+      "panels": [
+        { "x": 0, "right": 208, "y": 90, "bottom": 772 },
+        { "x": 208, "right": 1016, "y": 90, "bottom": 772 },
+        { "x": 1016, "right": 1280, "y": 90, "bottom": 772 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a3",
+      "theme": "light",
+      "viewport": [1440, 900],
+      "pageHeight": 900,
+      "pageWidth": 1440,
+      "canvas": { "width": 920, "height": 517.5 },
+      "panels": [
+        { "x": 0, "right": 208, "y": 90, "bottom": 872 },
+        { "x": 208, "right": 1176, "y": 90, "bottom": 872 },
+        { "x": 1176, "right": 1440, "y": 90, "bottom": 872 }
+      ],
+      "overflowControls": []
+    },
+    {
+      "variant": "a3",
+      "theme": "dark",
+      "viewport": [1440, 900],
+      "pageHeight": 900,
+      "pageWidth": 1440,
+      "canvas": { "width": 920, "height": 517.5 },
+      "panels": [
+        { "x": 0, "right": 208, "y": 90, "bottom": 872 },
+        { "x": 208, "right": 1176, "y": 90, "bottom": 872 },
+        { "x": 1176, "right": 1440, "y": 90, "bottom": 872 }
+      ],
+      "overflowControls": []
+    }
+  ],
+  "checks": [
+    "a1/no production bridge",
+    "a1-light-1280x800/layout",
+    "a1-light-1280x800/contrast",
+    "a1-light-1280x800/selection sync",
+    "a1-light-1280x800/Aura isolation",
+    "a1-dark-1280x800/layout",
+    "a1-dark-1280x800/contrast",
+    "a1-dark-1280x800/selection sync",
+    "a1-dark-1280x800/Aura isolation",
+    "a1-light-1440x900/layout",
+    "a1-light-1440x900/contrast",
+    "a1-light-1440x900/selection sync",
+    "a1-light-1440x900/Aura isolation",
+    "a1-dark-1440x900/layout",
+    "a1-dark-1440x900/contrast",
+    "a1-dark-1440x900/selection sync",
+    "a1-dark-1440x900/Aura isolation",
+    "a1/property edit + actual thumbnail",
+    "a1/save success, failure, conflict, draft retention, reopen",
+    "a1/draft survives panel and workspace switches, Aura and delete focus, menu focus restoration, layer selection",
+    "a1/offline",
+    "a1/multiselect, nudge, keyboard selection, resize validation, themes, reduced motion, slides",
+    "a2/no production bridge",
+    "a2-light-1280x800/layout",
+    "a2-light-1280x800/contrast",
+    "a2-light-1280x800/selection sync",
+    "a2-light-1280x800/Aura isolation",
+    "a2-dark-1280x800/layout",
+    "a2-dark-1280x800/contrast",
+    "a2-dark-1280x800/selection sync",
+    "a2-dark-1280x800/Aura isolation",
+    "a2-light-1440x900/layout",
+    "a2-light-1440x900/contrast",
+    "a2-light-1440x900/selection sync",
+    "a2-light-1440x900/Aura isolation",
+    "a2-dark-1440x900/layout",
+    "a2-dark-1440x900/contrast",
+    "a2-dark-1440x900/selection sync",
+    "a2-dark-1440x900/Aura isolation",
+    "a2/property edit + actual thumbnail",
+    "a2/save success, failure, conflict, draft retention, reopen",
+    "a2/draft survives panel and workspace switches, Aura and delete focus, menu focus restoration, layer selection",
+    "a2/offline",
+    "a2/multiselect, nudge, keyboard selection, resize validation, themes, reduced motion, slides",
+    "a3/no production bridge",
+    "a3-light-1280x800/layout",
+    "a3-light-1280x800/contrast",
+    "a3-light-1280x800/selection sync",
+    "a3-light-1280x800/Aura isolation",
+    "a3-dark-1280x800/layout",
+    "a3-dark-1280x800/contrast",
+    "a3-dark-1280x800/selection sync",
+    "a3-dark-1280x800/Aura isolation",
+    "a3-light-1440x900/layout",
+    "a3-light-1440x900/contrast",
+    "a3-light-1440x900/selection sync",
+    "a3-light-1440x900/Aura isolation",
+    "a3-dark-1440x900/layout",
+    "a3-dark-1440x900/contrast",
+    "a3-dark-1440x900/selection sync",
+    "a3-dark-1440x900/Aura isolation",
+    "a3/property edit + actual thumbnail",
+    "a3/save success, failure, conflict, draft retention, reopen",
+    "a3/draft survives panel and workspace switches, Aura and delete focus, menu focus restoration, layer selection",
+    "a3/offline",
+    "a3/multiselect, nudge, keyboard selection, resize validation, themes, reduced motion, slides",
+    "review/three working prototype entries and screenshots"
+  ],
+  "errors": [],
+  "electron": { "version": "44.7.2", "arch": "x64" },
+  "pass": true
+}
