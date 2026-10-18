@@ -509,6 +509,7 @@
       const agent = `<h3>Agent / Proposal review</h3><div class="box"><strong>待审查示例 · 未执行</strong><p>目标：title-01<br>expectedRevision: 12</p><code>element.updateText</code></div><p>能力：仅当前文档。第三方网页检查未授权。</p><ol><li>读取结构化选择</li><li>审核命令与来源</li><li>应用后检查结果及截图</li></ol>`;
       const browser = `<h3>Aura Browser</h3><div class="browser-tabs"><span>Slide Preview · 示例</span><span>HTML Lab · 示例</span><span>Web Research · 未加载</span></div><div class="address">Origin: isolated preview / Slide 01 / revision 12</div><div class="guest"><strong>WebContentsView 预留区域</strong><p>仅线框，没有嵌入网页。Guest 无通用 IPC，无文件系统桥；默认拒绝额外权限。</p></div>`;
       const diagnostics = `<h3>Diagnostics / Inspection</h3><ul><li>示例 target: title-01</li><li>示例 revision: 12</li><li>Runtime diagnostics: 未运行</li><li>Screenshot verification: 未运行</li></ul>`;
+      const audit = `<h3>Command results / Audit</h3><p>暂无操作记录 · 不执行任何命令</p>`;
       const panel = (body, extra = '') => `<section class="panel ${extra}">${body}</section>`;
       function render() {
         const direction = document.querySelector('#direction').value;
@@ -532,18 +533,16 @@
                   : inspector,
             );
         } else if (direction === 'b') {
-          const left =
-            activeWorkspace === 'design'
-              ? layers
-              : activeWorkspace === 'agent'
-                ? agent
-                : thumbnails;
+          const left = activeWorkspace === 'design' ? layers : thumbnails;
           content =
             panel(left) +
-            panel(activeWorkspace === 'aura' ? browser : slide, 'stage') +
+            panel(
+              activeWorkspace === 'agent' ? agent : activeWorkspace === 'aura' ? browser : slide,
+              'stage',
+            ) +
             panel(
               activeWorkspace === 'agent'
-                ? '<h3>Command results / Audit</h3><p>暂无操作记录 · 不执行任何命令</p>'
+                ? audit
                 : activeWorkspace === 'aura'
                   ? diagnostics
                   : inspector,
@@ -551,12 +550,20 @@
             );
         } else {
           content =
-            panel(agent + '<hr>' + layers) +
+            panel(
+              agent +
+                '<hr>' +
+                (activeWorkspace === 'design'
+                  ? layers
+                  : '<h3>Selection context</h3><p>title-01 · Text · revision 12</p>'),
+            ) +
             panel(
               slide +
-                (activeWorkspace === 'design' || activeWorkspace === 'editor'
-                  ? '<hr>' + inspector
-                  : '<hr>' + diagnostics),
+                (activeWorkspace === 'agent'
+                  ? '<hr>' + audit
+                  : activeWorkspace === 'aura'
+                    ? ''
+                    : '<hr>' + inspector),
               'stage',
             ) +
             panel(browser + (activeWorkspace === 'aura' ? '<hr>' + diagnostics : ''));

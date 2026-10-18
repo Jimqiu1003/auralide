@@ -35,13 +35,41 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
   for (const direction of ['a', 'b', 'c']) {
     await page.selectOption('#direction', direction);
+    const states = [];
     for (const workspace of ['editor', 'design', 'aura', 'agent']) {
       await page.locator(`button[data-workspace="${workspace}"]`).click();
       assert.equal(await page.locator('#workspace').getAttribute('data-workspace'), workspace);
       assert.equal(await page.locator('button[aria-pressed="true"]').count(), 1);
       assert((await page.locator('#content').innerText()).length > 100);
+      states.push(await page.locator('#content').innerHTML());
+      if (direction === 'b' && workspace === 'agent') {
+        assert.equal(
+          await page
+            .locator('.stage')
+            .getByRole('heading', { name: 'Agent / Proposal review' })
+            .count(),
+          1,
+        );
+        assert.equal(await page.locator('.stage .slide').count(), 0);
+      }
+      if (direction === 'c' && workspace === 'aura')
+        assert.equal(
+          await page
+            .getByRole('heading', { name: 'Diagnostics / Inspection', exact: true })
+            .count(),
+          1,
+        );
+      if (direction === 'c' && workspace === 'agent')
+        assert.equal(
+          await page
+            .locator('.stage')
+            .getByRole('heading', { name: 'Command results / Audit' })
+            .count(),
+          1,
+        );
       results.push(`${direction}/${workspace}:PASS`);
     }
+    assert.equal(new Set(states).size, 4, `distinct ${direction} workspace content`);
     await page.locator('button[data-workspace="editor"]').click();
     await page.selectOption('#theme', 'light');
     await page.screenshot({ path: join(out, `direction-${direction}.png`) });
