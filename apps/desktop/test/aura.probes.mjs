@@ -152,8 +152,34 @@ export async function auraProbes(app, page, mode, artifacts, check) {
   });
   check('Aura lab diagnostics succeeds', labDiagnostics.ok, true);
   check('Aura lab remains inert', labDiagnostics.value?.scriptCount, 0);
-  await invoke({ tool: 'browser.close', input: { tabId: lab.id } });
-  await invoke({ tool: 'browser.close', input: { tabId: tab.id } });
+  await page.getByTestId('aura-close').click();
+  await wait(async () => (await snapshot()).length === 1, 'active lab closed');
+  check(
+    'Aura closing active tab selects remaining preview',
+    await page
+      .getByRole('button', { name: 'slide-preview', exact: true })
+      .getAttribute('aria-pressed'),
+    'true',
+  );
+  await wait(async () => (await snapshot())[0]?.visible === true, 'fallback preview visible');
+  check('Aura fallback preview remains visible', (await snapshot())[0].visible, true);
+  await page.getByTestId('document-text-input').fill('Changed after rendering preview.');
+  await page.getByTestId('document-apply').click();
+  await page.waitForFunction(
+    (revision) =>
+      Number(document.querySelector('[data-testid="document-revision"]')?.textContent) > revision,
+    tab.revision,
+  );
+  await page.getByTestId('aura-diagnostics').click();
+  await page.waitForFunction(() =>
+    document.querySelector('[data-testid="aura-result"]')?.textContent?.includes('"stale":true'),
+  );
+  const staleDiagnostics = JSON.parse(await page.getByTestId('aura-result').textContent());
+  check('Aura diagnostics button accepts current revision', staleDiagnostics.ok, true);
+  check('Aura diagnostics reports stale preview', staleDiagnostics.value?.stale, true);
+  check('Aura diagnostics retains render revision', staleDiagnostics.value?.revision, tab.revision);
+  await page.getByTestId('aura-close').click();
+  await wait(async () => (await snapshot()).length === 0, 'last preview closed');
   check('Aura close releases every native guest', (await snapshot()).length, 0);
   const listed = await invoke({ tool: 'browser.listTabs', input: {} });
   check('Aura close clears tab registry', listed.value?.length, 0);

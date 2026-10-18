@@ -67,6 +67,12 @@ export function AuraPoc(): JSX.Element {
     }
     setBusy(true);
     try {
+      if (request.tool === 'preview.getDiagnostics') {
+        request = {
+          ...request,
+          input: { ...request.input, expectedRevision: (await bridge.getDocument()).revision },
+        };
+      }
       const result: AuraResult = await bridge.auraInvoke(request);
       if (result.ok && result.value !== null && typeof result.value === 'object') {
         const value = result.value;
@@ -81,8 +87,19 @@ export function AuraPoc(): JSX.Element {
         }
       }
       if (result.ok && request.tool === 'browser.close') {
-        setTabs((previous) => previous.filter((tab) => tab.id !== request.input.tabId));
-        setActive(null);
+        const closedId = request.input.tabId;
+        const remaining = tabs.filter((tab) => tab.id !== closedId);
+        setTabs(remaining);
+        setActive((previous) =>
+          previous?.id === closedId ? (remaining.at(-1) ?? null) : previous,
+        );
+        requestAnimationFrame(() => {
+          const section = surface.current?.closest('section');
+          (
+            section?.querySelector<HTMLButtonElement>('nav button[aria-pressed="true"]') ??
+            section?.querySelector<HTMLButtonElement>('button[data-testid="aura-render"]')
+          )?.focus();
+        });
       }
       setOutput(JSON.stringify(result));
     } catch (error: unknown) {
