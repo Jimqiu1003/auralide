@@ -84,9 +84,12 @@ session、同样的 CSP 与禁动画注入、同样的 `data:` URL 与请求拦�
 使"边界"事实上变成"页数上限"。修复后耗时与页数基本无关，余量恢复到数量级级别；仍建议后续在此基础上
 复核超大文档（接近 100 页上限）的行为。
 
-## 6. 未验证项
+## 6. 验证状态与未验证项
 
-- 已修复项只在 **Windows x64 + Electron 44.7.2** 上实测；macOS ARM64 目标未验证。
-- 本机 Electron 需 `--no-sandbox` 才能启动，因此"默认沙箱下的表现"在本机未验证；该参数不影响本次结论
-  （渲染/布局/rAF 与沙箱无关），但按仓库规则如实标注。
+- 已修复项在**两个首发平台**验证通过：**Windows x64**（本机 Electron 44.7.2 实测）与 **macOS ARM64**（CI）。
+  CI run `39186933505` 两个平台的 “HTML import, export, Save As, cancellation and restart” 步骤均 `pass`，
+  日志为 `file-io: 44 PASS`，8 页样本导入耗时 **Windows 488 ms / macOS 406 ms**。
+- 本机 Electron 需 `--no-sandbox` 才能启动（进程沙箱不允许 Chromium 的命名管道），因此"默认沙箱下的表现"在**本机**
+  未验证；该参数不影响本次结论（渲染、布局与 `requestAnimationFrame` 与沙箱无关）。CI runner 未使用该参数且同样
+  通过，故默认沙箱下的行为已由 CI 覆盖。
 - 发现 2、3、4 只做了定位与最小复现，**未修改**，等待 Lead 决策。
