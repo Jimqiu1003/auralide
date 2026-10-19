@@ -94,11 +94,45 @@ await writeFile(
   `Auralide ${version} — Windows x64 portable preview\nSource: ${commit}\n\n` +
     '解压完整文件夹，双击 Auralide.exe。无需安装 Node.js 或 pnpm。\n' +
     '请保持 exe、resources 和其余运行库在同一文件夹，不要只复制 exe。\n' +
+    '如果双击后没有窗口、也没有任何提示，请改用同目录下的 启动诊断.cmd：\n' +
+    '它会显示启动失败的真实原因（例如目录权限受限或安全软件拦截）。\n' +
     '支持基础编辑、会话内撤销/重做、保存/重开、有限 HTML 转换/导出和基础演示。\n' +
     'Agent Apply、任意 HTML 无损编辑、持久撤销历史、图像资产管线及 PPTX/PDF 尚未交付。\n' +
     '这是未签名预览版；Windows 可能提示未知发布者。正式版本发布需另外验收。\n',
 );
 await rename(join(portableDir, 'electron.exe'), join(portableDir, 'Auralide.exe'));
+
+// Chromium aborts with STATUS_BREAKPOINT before any application code runs when sandbox
+// initialisation fails (measured: exit code -2147483645, no window, no dialog, no log, and the
+// main script never executes). Nothing inside the app can report that, so the package ships a
+// launcher that runs the executable, reads the exit code and explains a failure.
+await writeFile(
+  join(portableDir, '启动诊断.cmd'),
+  '\uFEFF@echo off\r\n' +
+    'rem Auralide portable launcher with startup diagnostics.\r\n' +
+    'rem The app cannot report a Chromium sandbox abort by itself: the process dies before any\r\n' +
+    'rem application code runs. This launcher surfaces the exit code instead of failing silently.\r\n' +
+    'setlocal\r\n' +
+    '"%~dp0Auralide.exe" %*\r\n' +
+    'set "AURALIDE_EXIT=%ERRORLEVEL%"\r\n' +
+    'if "%AURALIDE_EXIT%"=="0" goto :eof\r\n' +
+    'echo.\r\n' +
+    'echo Auralide exited with code %AURALIDE_EXIT%.\r\n' +
+    'if "%AURALIDE_EXIT%"=="-2147483645" (\r\n' +
+    '  echo.\r\n' +
+    '  echo This is STATUS_BREAKPOINT: Chromium could not initialise its sandbox.\r\n' +
+    '  echo Common causes:\r\n' +
+    '  echo   - the folder has restrictive ACLs, e.g. a sandboxed or policy-managed workspace\r\n' +
+    '  echo   - an endpoint-security product blocked the renderer sandbox\r\n' +
+    '  echo   - the folder is a network share or a synchronised cloud folder\r\n' +
+    '  echo.\r\n' +
+    '  echo Try: move the whole folder to a plain local path such as D:\\Auralide and run again.\r\n' +
+    ')\r\n' +
+    'echo.\r\n' +
+    'pause\r\n' +
+    'exit /b %AURALIDE_EXIT%\r\n',
+  'utf8',
+);
 const manifest = {
   version,
   commit,
