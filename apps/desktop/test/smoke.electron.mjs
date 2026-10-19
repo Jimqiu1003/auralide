@@ -411,6 +411,45 @@ async function runMode(mode) {
       finalText,
     );
     check('no Vite error overlay', await page.locator('vite-error-overlay').count(), 0);
+
+    // Demo 0.1: actual user-facing editor controls must apply validated Core commands.
+    check('desktop demo workspace exists', await page.getByTestId('demo-workspace').count(), 1);
+    await page.getByTestId('demo-add-slide').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '5',
+    );
+    check('demo adds a slide', await page.getByTestId('demo-slide-item').count(), 2);
+    await page.getByTestId('demo-add-rectangle').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '6',
+    );
+    const shapeState = await page.evaluate(() => window.auralide.getDocument());
+    check('demo adds real Core shape', shapeState.slides[1].elements[0].kind, 'shape');
+    await page.getByTestId('demo-add-text').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '7',
+    );
+    await page.getByTestId('document-text-input').fill('Desktop Demo 0.1');
+    await page.getByTestId('document-apply').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '8',
+    );
+    const editedSlide = await page.evaluate(() => window.auralide.getDocument());
+    check('demo edits inserted text', editedSlide.slides[1].elements[1].text, 'Desktop Demo 0.1');
+    await page.getByTestId('demo-layer-item').first().click();
+    await page.getByRole('button', { name: '→', exact: true }).click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '9',
+    );
+    const movedSlide = await page.evaluate(() => window.auralide.getDocument());
+    check('demo moves shape through Core', movedSlide.slides[1].elements[0].geometry.x, 110);
+    await page.getByTestId('demo-delete-element').click();
+    await page.waitForFunction(
+      () => document.querySelector('[data-testid="document-revision"]')?.textContent === '10',
+    );
+    const deletedShape = await page.evaluate(() => window.auralide.getDocument());
+    check('demo removes selected layer', deletedShape.slides[1].elements.length, 1);
+
     await auraProbes(app, page, mode, artifacts, check);
 
     const cspViolations = consoleMessages.filter((message) =>

@@ -176,7 +176,10 @@ try {
     inspected.value?.text,
     'P2A survives application restart',
   );
-  await page.evaluate(() => window.scrollTo(0, 0));
+  // Preview is in its own section below the canvas-first editor. Center the native guest.
+  await page.getByTestId('aura-surface').evaluate((element) => {
+    element.scrollIntoView({ block: 'center', inline: 'nearest' });
+  });
   await page.waitForFunction(async (tab) => {
     const result = await window.auralide.auraInvoke({
       tool: 'preview.getDiagnostics',
