@@ -4,19 +4,28 @@ import { useEffect, useRef, useState } from 'react';
 import type { DocumentStatus } from '../shared/api.js';
 import { AuraWorkspace } from './aura-workspace.js';
 import { SlideArtwork } from './slide-artwork.js';
+import { BundleControls } from './bundle-controls.js';
+import type { Assets } from '@auralide/renderer';
 import { Icon } from './icons.js';
 import type { JSX, PointerEvent as ReactPointerEvent } from 'react';
 
 const ids = createIdGenerator();
 
 type FileOperation =
-  'saveDocument' | 'saveDocumentAs' | 'openDocument' | 'newDocument' | 'importHtml' | 'exportHtml';
+  | 'saveDocument'
+  | 'saveDocumentAs'
+  | 'openDocument'
+  | 'newDocument'
+  | 'importHtml'
+  | 'exportHtml'
+  | 'importSourceHtml';
 const fileLabels: Record<FileOperation, string> = {
   newDocument: '新建',
   openDocument: '打开',
   saveDocument: '保存',
   saveDocumentAs: '另存为',
   importHtml: '导入 HTML',
+  importSourceHtml: '导入 HTML（保留动态效果）',
   exportHtml: '导出 HTML',
 };
 
@@ -41,7 +50,13 @@ const elementLabel = (element: Element): string =>
     ? element.text.slice(0, 32) || 'Empty text'
     : element.kind === 'shape'
       ? element.shape
-      : 'Image (asset preview pending)');
+      : element.kind === 'source'
+        ? 'HTML 源码组件'
+        : element.kind === 'audio'
+          ? '音频'
+          : element.kind === 'video'
+            ? '视频'
+            : '图片');
 
 /**
  * A2 production shell. The renderer only owns selection and draft UI state.
@@ -49,6 +64,7 @@ const elementLabel = (element: Element): string =>
  */
 export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean }): JSX.Element {
   const [document, setDocument] = useState<Presentation | null>(null);
+  const [assets, setAssets] = useState<Assets>({});
   const [slideId, setSlideId] = useState('');
   const [elementId, setElementId] = useState('');
   const [text, setText] = useState('');
@@ -80,6 +96,19 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
   const slide = document?.slides.find((item) => item.id === slideId) ?? document?.slides[0];
   const selected = slide?.elements.find((item) => item.id === elementId);
   const textElement = selected?.kind === 'text' ? selected : undefined;
+  useEffect(() => {
+    const fonts: FontFace[] = [];
+    for (const [id, asset] of Object.entries(assets))
+      if (asset.mime.startsWith('font/')) {
+        const font = new FontFace('asset-' + id, `url(data:${asset.mime};base64,${asset.base64})`);
+        globalThis.document.fonts.add(font);
+        fonts.push(font);
+        void font.load().catch(() => setMessage('内嵌字体无法加载，请检查字体文件。'));
+      }
+    return () => {
+      for (const font of fonts) globalThis.document.fonts.delete(font);
+    };
+  }, [assets]);
 
   const adopt = (value: Presentation, nextSlide?: string, nextElement?: string): void => {
     for (const id of drafts.current.keys()) {
@@ -110,10 +139,15 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
       return;
     }
     setBusy(true);
-    void Promise.all([bridge.getDocument(), bridge.getDocumentStatus()]).then(
-      ([value, status]) => {
+    void Promise.all([
+      bridge.getDocument(),
+      bridge.getDocumentStatus(),
+      bridge.getDocumentAssets(),
+    ]).then(
+      ([value, status, resources]) => {
         if (cancelled) return;
         setFileStatus(status);
+        setAssets(resources);
         const initialSlide = value.slides[0];
         const initialElement =
           initialSlide?.elements.find((item) => item.kind === 'text') ?? initialSlide?.elements[0];
@@ -249,6 +283,18 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
       setMessage('请先应用或撤回文本输入，再开始演示。');
       return;
     }
+    if (
+      Object.keys(assets).length ||
+      document.slides.some(
+        (s) =>
+          (s.transition && s.transition !== 'none') ||
+          s.elements.some((e) => e.entrance && e.entrance.effect !== 'none'),
+      )
+    ) {
+      const result = await window.auralide?.playDocument({ expectedRevision: document.revision });
+      if (result && !result.ok) setMessage(result.error.message);
+      return;
+    }
     invoker.current = globalThis.document.activeElement as HTMLElement | null;
     try {
       await window.auralide?.auraSetBounds({ x: 0, y: 0, width: 0, height: 0, visible: false });
@@ -367,7 +413,12 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
   const fileAction = async (operation: FileOperation, confirmed = false): Promise<void> => {
     const bridge = window.auralide;
     if (document === null || locked.current || bridge === undefined) return;
-    const replacesDocument = ['openDocument', 'importHtml', 'newDocument'].includes(operation);
+    const replacesDocument = [
+      'openDocument',
+      'importHtml',
+      'newDocument',
+      'importSourceHtml',
+    ].includes(operation);
     pendingFileOperation.current = operation;
     if (drafts.current.size && !confirmed) {
       showModal(replacesDocument ? 'open-drafts' : 'save-drafts');
@@ -407,6 +458,7 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
       }
       const result = await bridge[operation]({ expectedRevision: current.revision });
       if (result.ok) {
+        setAssets(await bridge.getDocumentAssets());
         if (replacesDocument) drafts.current.clear();
         adopt(
           result.value.document,
@@ -428,7 +480,7 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
           'stale-revision': '文档版本已更新，操作已拒绝。未保存输入已保留',
           'access-denied': '无法写入文件，未保存内容已保留',
           'invalid-input': result.error.message,
-          'invalid-document': '无法安全读取此文档，当前内容已保留',
+          'invalid-document': result.error.message,
           'invalid-json': '文件格式无效，当前文档已保留',
         };
         setMessage(messages[result.error.code] ?? '文件操作失败，当前文档和输入已保留');
@@ -887,7 +939,7 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
               >
                 <span className="slide-number">{index + 1}</span>
                 <span className="slide-thumb">
-                  <SlideArtwork slide={item} size={document.slideSize} />
+                  <SlideArtwork slide={item} size={document.slideSize} assets={assets} />
                 </span>
                 <span className="slide-caption">{item.name ?? `幻灯片 ${index + 1}`}</span>
               </button>
@@ -940,6 +992,7 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
             >
               {document && slide ? (
                 <SlideArtwork
+                  assets={assets}
                   slide={slide}
                   size={document.slideSize}
                   selectedId={elementId}
@@ -1164,7 +1217,7 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
                       </form>
                     ) : (
                       <>
-                        <h3>形状</h3>
+                        <h3>{selected.kind === 'shape' ? '形状' : elementLabel(selected)}</h3>
                         <div className="readonly-row">
                           <span>填充</span>
                           <span className="color-value">
@@ -1176,7 +1229,11 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
                                     : '#e6e9ee',
                               }}
                             />
-                            {selected.kind === 'shape' ? (selected.fill ?? '#4677e8') : '图像占位'}
+                            {selected.kind === 'shape'
+                              ? (selected.fill ?? '#4677e8')
+                              : selected.kind === 'source'
+                                ? '完整源码与资源已封装'
+                                : '素材随文档保存'}
                           </span>
                         </div>
                         {selected.kind === 'shape' ? (
@@ -1296,6 +1353,28 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
                     <p className="inspector-help">选择文字或形状，查看和编辑它的属性。</p>
                   </>
                 )}
+                {document && slide && (
+                  <BundleControls
+                    document={document}
+                    slide={slide}
+                    selected={selected}
+                    busy={busy}
+                    onMessage={setMessage}
+                    updateProperties={updateProperties}
+                    updateSlide={async (transition) => {
+                      await apply(
+                        'slide.updateProperties',
+                        { kind: 'slide', slideId: slide.id },
+                        { transition },
+                      );
+                    }}
+                    onChange={async (value) => {
+                      adopt(value);
+                      setAssets(await window.auralide!.getDocumentAssets());
+                      setFileStatus(await window.auralide!.getDocumentStatus());
+                    }}
+                  />
+                )}
                 <section className="property-section">
                   <button
                     data-testid="demo-delete-element"
@@ -1406,6 +1485,7 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
                 'saveDocument',
                 'saveDocumentAs',
                 'importHtml',
+                'importSourceHtml',
                 'exportHtml',
               ] as const
             ).map((operation) => (

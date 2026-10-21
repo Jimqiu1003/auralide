@@ -25,7 +25,15 @@ Build an AI-native presentation editor combining:
 
 The editor must not treat raw HTML as the sole source of document truth.
 
-### Current owner-authorized execution (2026-10-18)
+### Current owner-authorized execution (2026-10-21)
+
+The owner authorized packaged offline HTML v2 with assets/dynamic playback and round trips, followed
+by bounded visual editing inside source HTML. This request supersedes the older scope restrictions
+below for these capabilities only. Structured commands, isolated guests, main-owned native file
+grants and sequential single-agent execution remain required. See `docs/reports/packaged-html.md`
+and ADR-0006's dated extension. Do not merge or publish a release automatically.
+
+### Previous owner-authorized execution (2026-10-18)
 
 The owner requested execution of `docs/architecture/next-stage-plan.md` and a usable Windows x64
 portable EXE. M0 corrections are merged through #20/#21/#23. The isolated `feat/stable-portable`

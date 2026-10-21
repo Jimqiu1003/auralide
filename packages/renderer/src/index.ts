@@ -7,4 +7,6 @@ import type { Layer } from '@auralide/core';
  * P1 adds the first real module behind this boundary.
  */
 export const layer: Layer = 'renderer';
-export { PREVIEW_CSP, renderSlideHtml, renderSlideMarkup } from './preview.js';
+export { assetUrl, SOURCE_CSP } from './assets.js';
+export type { Asset, Assets } from './assets.js';
+export { PREVIEW_CSP, renderSlideHtml, renderSlideMarkup, escapeHtml } from './preview.js';

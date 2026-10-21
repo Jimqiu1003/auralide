@@ -9,7 +9,7 @@ import type { Presentation } from '@auralide/core';
 
 import type { FileError, FileErrorCode } from '../shared/document-files.js';
 
-const MAX_BYTES = 20 * 1024 * 1024;
+const MAX_BYTES = 100 * 1024 * 1024;
 export class DocumentFileError extends Error {
   constructor(
     readonly code: FileErrorCode,
@@ -31,7 +31,7 @@ export const fileError = (error: unknown): FileError => {
         };
 };
 const hash = (bytes: Buffer): string => createHash('sha256').update(bytes).digest('hex');
-const readBytes = async (path: string): Promise<Buffer> => {
+const readBytes = async (path: string, maximum = MAX_BYTES): Promise<Buffer> => {
   const link = await fs.lstat(path);
   if (!link.isFile() || link.isSymbolicLink())
     throw new DocumentFileError(
@@ -43,8 +43,8 @@ const readBytes = async (path: string): Promise<Buffer> => {
     const stat = await handle.stat();
     if (!stat.isFile() || stat.ino !== link.ino || stat.dev !== link.dev)
       throw new DocumentFileError('file-changed', 'The selected file changed while opening.');
-    if (stat.size > MAX_BYTES)
-      throw new DocumentFileError('too-large', 'P2A documents must be at most 20 MiB.');
+    if (stat.size > maximum)
+      throw new DocumentFileError('too-large', `文件不能超过 ${maximum / 1024 / 1024} MiB。`);
     // Read at most the budget plus one byte, including when another process grows the file.
     const bytes = Buffer.alloc(stat.size + 1);
     let length = 0;
@@ -53,8 +53,8 @@ const readBytes = async (path: string): Promise<Buffer> => {
       if (read.bytesRead === 0) break;
       length += read.bytesRead;
     }
-    if (length > MAX_BYTES)
-      throw new DocumentFileError('too-large', 'P2A documents must be at most 20 MiB.');
+    if (length > maximum)
+      throw new DocumentFileError('too-large', `文件不能超过 ${maximum / 1024 / 1024} MiB。`);
     const after = await handle.stat();
     if (
       length > stat.size ||
@@ -68,6 +68,7 @@ const readBytes = async (path: string): Promise<Buffer> => {
     await handle.close();
   }
 };
+export const readResourceBytes = readBytes;
 export const documentFileStamp = async (path: string): Promise<string | null> => {
   try {
     return hash(await readBytes(path));
@@ -90,7 +91,7 @@ export const readTextFile = async (path: string): Promise<{ text: string; stamp:
 export const readDocumentFile = async (
   path: string,
 ): Promise<{ document: Presentation; stamp: string }> => {
-  const bytes = await readBytes(path);
+  const bytes = await readBytes(path, 20 * 1024 * 1024);
   let json: string;
   try {
     json = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -117,7 +118,10 @@ export const writeDocumentFile = async (
   const parsed = presentationSchema.safeParse(input);
   if (!parsed.success)
     throw new DocumentFileError('invalid-document', 'Cannot save an invalid document.');
-  return writeTextFile(path, serializeDocument(parsed.data), expectedStamp);
+  const text = serializeDocument(parsed.data);
+  if (Buffer.byteLength(text) > 20 * 1024 * 1024)
+    throw new DocumentFileError('too-large', '结构化文档不能超过 20 MiB。');
+  return writeTextFile(path, text, expectedStamp);
 };
 export const writeTextFile = async (
   path: string,
@@ -126,7 +130,7 @@ export const writeTextFile = async (
 ): Promise<{ stamp: string; backupCreated: boolean }> => {
   const bytes = Buffer.from(text, 'utf8');
   if (bytes.length > MAX_BYTES)
-    throw new DocumentFileError('too-large', 'P2A documents must be at most 20 MiB.');
+    throw new DocumentFileError('too-large', '最终文件不能超过 100 MiB。');
   if ((await documentFileStamp(path)) !== expectedStamp)
     throw new DocumentFileError(
       'file-changed',

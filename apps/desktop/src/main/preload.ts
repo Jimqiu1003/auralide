@@ -22,6 +22,13 @@ const api: AuralideApi = Object.freeze({
   getRuntimeInfo: (): Promise<RuntimeInfo> => ipcRenderer.invoke(IPC.runtimeInfo),
   ping: (request: PingRequest): Promise<PingResponse> => ipcRenderer.invoke(IPC.ping, request),
   getDocument: (): Promise<Presentation> => ipcRenderer.invoke(IPC.getDocument),
+  getDocumentAssets: () => ipcRenderer.invoke(IPC.getDocumentAssets),
+  playDocument: (request: Parameters<AuralideApi['playDocument']>[0]) =>
+    ipcRenderer.invoke(IPC.playDocument, request),
+  importSourceHtml: (request: Parameters<AuralideApi['importSourceHtml']>[0]) =>
+    ipcRenderer.invoke(IPC.importSourceHtml, request),
+  insertAsset: (request: Parameters<AuralideApi['insertAsset']>[0]) =>
+    ipcRenderer.invoke(IPC.insertAsset, request),
   getDocumentStatus: () => ipcRenderer.invoke(IPC.getDocumentStatus),
   editHistory: (request: Parameters<AuralideApi['editHistory']>[0]) =>
     ipcRenderer.invoke(IPC.editHistory, request),

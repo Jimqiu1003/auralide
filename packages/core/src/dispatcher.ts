@@ -13,6 +13,7 @@ import {
   presentationTargetSchema,
   slideCreatePayloadSchema,
   slideTargetSchema,
+  slideUpdatePropertiesPayloadSchema,
 } from './command.js';
 import type {
   CommandError,
@@ -105,6 +106,13 @@ const nextRevision = (document: Presentation): Result<number, CommandError> =>
 
 /** A validated command with its target already resolved against the current document. */
 type PendingCommand =
+  | {
+      readonly operation: 'slide.updateProperties';
+      readonly target: SlideTarget;
+      readonly payload: z.output<typeof slideUpdatePropertiesPayloadSchema>;
+      readonly origin: EditOrigin;
+      readonly slide: Slide;
+    }
   | {
       readonly operation: 'element.updateProperties';
       readonly target: ElementTarget;
@@ -392,6 +400,16 @@ const resolveElementProperties = (
   const payload = elementUpdatePropertiesPayloadSchema.safeParse(context.payload);
   if (!payload.success) return err(invalidPayload('Invalid element properties.'));
   const kind = located.value.element.kind;
+  if (payload.data.assetId !== undefined && !['image', 'video', 'audio', 'source'].includes(kind))
+    return err(conflict('This element has no asset.'));
+  if (kind === 'source' && payload.data.assetId !== undefined) {
+    const element = located.value.element;
+    if (element.kind !== 'source' || payload.data.expectedSourceRevision !== element.sourceRevision)
+      return err(conflict('Source revision changed. Reselect the source before editing.'));
+    if (element.sourceRevision >= Number.MAX_SAFE_INTEGER)
+      return err(conflict('Source revision limit reached.'));
+  } else if (payload.data.expectedSourceRevision !== undefined)
+    return err(invalidPayload('Source revision requires a source replacement.'));
   if (
     (payload.data.style !== undefined && kind !== 'text') ||
     ((payload.data.fill !== undefined || payload.data.stroke !== undefined) && kind !== 'shape')
@@ -427,6 +445,21 @@ const resolveElementReorder = (context: CommandContext): Result<PendingCommand, 
 const COMMAND_RESOLVERS: Readonly<
   Record<CommandOperation, (context: CommandContext) => Result<PendingCommand, CommandError>>
 > = {
+  'slide.updateProperties': (context) => {
+    const target = slideTargetSchema.safeParse(context.target);
+    const payload = slideUpdatePropertiesPayloadSchema.safeParse(context.payload);
+    if (!target.success || !payload.success)
+      return err(invalidPayload('Invalid slide properties.'));
+    const slide = resolveSlide(context.document, target.data.slideId);
+    if (!slide) return err(targetNotFound('Slide not found.'));
+    return ok({
+      operation: 'slide.updateProperties',
+      target: target.data,
+      payload: payload.data,
+      origin: context.origin,
+      slide,
+    });
+  },
   'slide.create': resolveSlideCreate,
   'slide.remove': resolveSlideRemove,
   'element.add': resolveElementAdd,
@@ -459,6 +492,8 @@ const execute = (
   command: PendingCommand,
 ): Result<Presentation, CommandError> => {
   switch (command.operation) {
+    case 'slide.updateProperties':
+      return ok(replaceSlide(document, { ...command.slide, ...command.payload }));
     case 'slide.create': {
       const { id, name, backgroundColor } = command.payload;
 
@@ -522,7 +557,7 @@ const execute = (
       return ok(replaceElement(document, command.slide, command.target.elementId, updated));
     }
     case 'element.updateProperties': {
-      const { geometry, style, fill, stroke } = command.payload;
+      const { geometry, style, fill, stroke, entrance, assetId } = command.payload;
       const element = command.element;
       const updated: Element = {
         ...element,
@@ -532,6 +567,11 @@ const execute = (
           : {}),
         ...(element.kind === 'shape' && fill !== undefined ? { fill } : {}),
         ...(element.kind === 'shape' && stroke !== undefined ? { stroke } : {}),
+        ...(entrance === undefined ? {} : { entrance }),
+        ...('assetId' in element && assetId !== undefined ? { assetId } : {}),
+        ...(element.kind === 'source' && assetId !== undefined
+          ? { sourceRevision: element.sourceRevision + 1 }
+          : {}),
       };
       return ok(replaceElement(document, command.slide, command.target.elementId, updated));
     }
@@ -607,7 +647,24 @@ export const applyCommand = (
     return executed;
   }
 
-  const parsed = presentationSchema.safeParse({ ...executed.value, revision: revision.value });
+  const modern = executed.value.slides.some(
+    (slide) =>
+      slide.transition !== undefined ||
+      slide.elements.some(
+        (element) =>
+          element.entrance !== undefined ||
+          element.kind === 'source' ||
+          element.kind === 'audio' ||
+          element.kind === 'video' ||
+          (element.kind === 'text' &&
+            (element.style?.fontAssetId !== undefined || element.style?.fontFamily !== undefined)),
+      ),
+  );
+  const parsed = presentationSchema.safeParse({
+    ...executed.value,
+    ...(modern ? { schemaVersion: '1.1' } : {}),
+    revision: revision.value,
+  });
   if (!parsed.success) {
     return err(invalidPayload(`Invalid resulting document: ${z.prettifyError(parsed.error)}`));
   }

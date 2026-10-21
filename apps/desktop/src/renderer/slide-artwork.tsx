@@ -1,5 +1,7 @@
 import type { Element, Slide, SlideSize } from '@auralide/core';
 import type { JSX, PointerEvent } from 'react';
+import { assetUrl } from '@auralide/renderer';
+import type { Assets } from '@auralide/renderer';
 
 export function SlideArtwork({
   slide,
@@ -12,6 +14,7 @@ export function SlideArtwork({
   onPointerUp,
   onPointerCancel,
   onEdit,
+  assets = {},
 }: {
   slide: Slide;
   size: SlideSize;
@@ -23,6 +26,7 @@ export function SlideArtwork({
   onPointerUp?: (event: PointerEvent<SVGSVGElement>) => void;
   onPointerCancel?: () => void;
   onEdit?: () => void;
+  assets?: Assets;
 }): JSX.Element {
   const interactive = onSelect !== undefined;
   return (
@@ -81,6 +85,9 @@ export function SlideArtwork({
                       fontWeight: item.style?.fontWeight ?? 400,
                       color: item.style?.color ?? '#172033',
                       textAlign: item.style?.align ?? 'left',
+                      fontFamily: item.style?.fontAssetId
+                        ? 'asset-' + item.style.fontAssetId
+                        : item.style?.fontFamily,
                     }}
                   >
                     {item.text}
@@ -115,16 +122,41 @@ export function SlideArtwork({
                     stroke={item.stroke ?? 'none'}
                   />
                 )
-              ) : (
-                <rect
+              ) : item.kind === 'image' && assets[item.assetId] ? (
+                <image
                   x={x}
                   y={y}
                   width={width}
                   height={height}
-                  fill="#e6e9ee"
-                  stroke="#737e8e"
-                  strokeDasharray="12 8"
-                />
+                  href={assetUrl(item.assetId, assets)}
+                  preserveAspectRatio="xMidYMid meet"
+                >
+                  <title>{item.alt ?? '图片'}</title>
+                </image>
+              ) : (
+                <>
+                  <rect
+                    x={x}
+                    y={y}
+                    width={width}
+                    height={height}
+                    fill="#e6e9ee"
+                    stroke="#737e8e"
+                    strokeDasharray="12 8"
+                  />
+                  <text x={x + 24} y={y + 48} fontSize="24" fill="#172033">
+                    {item.kind === 'source'
+                      ? 'HTML 源码组件'
+                      : item.kind === 'audio'
+                        ? '音频素材'
+                        : item.kind === 'video'
+                          ? '视频素材'
+                          : '图片素材'}
+                  </text>
+                  <text x={x + 24} y={y + 82} fontSize="18" fill="#526073">
+                    使用离线封装播放器查看
+                  </text>
+                </>
               )}
             </g>
             {interactive && (

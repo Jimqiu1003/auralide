@@ -8,6 +8,7 @@
 import type { CommandEnvelope, CommandError, Presentation, Result } from '@auralide/core';
 import type { AuraRequest, AuraResult } from '@auralide/agent';
 import type { FileResult } from './document-files.js';
+import type { Assets } from '@auralide/renderer';
 
 /** How the window was loaded. The two paths differ only in this. */
 export type LoadPath = 'development' | 'production';
@@ -56,6 +57,15 @@ export type AuralideApi = {
   readonly getRuntimeInfo: () => Promise<RuntimeInfo>;
   readonly ping: (request: PingRequest) => Promise<PingResponse>;
   readonly getDocument: () => Promise<Presentation>;
+  readonly getDocumentAssets: () => Promise<Assets>;
+  readonly playDocument: (request: { expectedRevision: number }) => Promise<FileResult>;
+  readonly importSourceHtml: (request: { expectedRevision: number }) => Promise<FileResult>;
+  readonly insertAsset: (request: {
+    expectedRevision: number;
+    slideId: string;
+    elementId?: string;
+    kind: 'image' | 'audio' | 'video' | 'font';
+  }) => Promise<FileResult>;
   readonly getDocumentStatus: () => Promise<DocumentStatus>;
   readonly applyCommand: (command: CommandEnvelope) => Promise<Result<Presentation, CommandError>>;
   readonly editHistory: (request: {

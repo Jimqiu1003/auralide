@@ -7,6 +7,8 @@ import type { Layer } from '@auralide/core';
  * P1 adds the first real module behind this boundary.
  */
 export const layer: Layer = 'html-bridge';
+export { scanSourceHtml } from './source.js';
+export type { SourceScan, SourceReference } from './source.js';
 
 export { HTML_IMPORT_SCRIPT } from './import.js';
 export type { HtmlImportReport, HtmlSnapshot } from './import.js';

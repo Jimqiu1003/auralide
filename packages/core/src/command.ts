@@ -6,6 +6,7 @@ import {
   elementSchema,
   geometrySchema,
   textStyleSchema,
+  elementCommonPropertiesSchema,
 } from './document.js';
 import type { DeepReadonly } from './document.js';
 import { elementIdSchema, slideIdSchema } from './ids.js';
@@ -29,6 +30,7 @@ export const COMMAND_OPERATIONS = [
   'element.remove',
   'element.updateProperties',
   'element.reorder',
+  'slide.updateProperties',
 ] as const;
 export type CommandOperation = (typeof COMMAND_OPERATIONS)[number];
 
@@ -68,6 +70,9 @@ export const slideCreatePayloadSchema = z.strictObject({
   name: z.string().min(1).max(200).optional(),
   backgroundColor: z.string().min(1).max(100).optional(),
 });
+export const slideUpdatePropertiesPayloadSchema = z.strictObject({
+  transition: z.enum(['none', 'fade', 'slide']),
+});
 export type SlideCreatePayload = DeepReadonly<z.output<typeof slideCreatePayloadSchema>>;
 
 /** `element.add`: appends a complete element (its id included) to a slide. */
@@ -86,6 +91,7 @@ export const elementUpdateTextPayloadSchema = z.strictObject({ text: z.string() 
 const literalColor = z.string().regex(/^(#[0-9a-f]{3,8}|[a-z]{1,20})$/i);
 export const elementUpdatePropertiesPayloadSchema = z
   .strictObject({
+    ...elementCommonPropertiesSchema.shape,
     geometry: geometrySchema.optional(),
     style: textStyleSchema
       .extend({ color: literalColor.optional() })

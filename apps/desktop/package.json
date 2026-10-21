@@ -19,12 +19,14 @@
   "dependencies": {
     "@auralide/agent": "workspace:*",
     "@auralide/core": "workspace:*",
+    "@auralide/exporters": "workspace:*",
+    "@auralide/html-bridge": "workspace:*",
     "@auralide/renderer": "workspace:*",
+    "acorn": "8.19.0",
+    "postcss": "8.5.30",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "zod": "^4.6.7",
-    "@auralide/html-bridge": "workspace:*",
-    "@auralide/exporters": "workspace:*"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",

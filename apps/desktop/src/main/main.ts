@@ -12,6 +12,10 @@ import {
   endDocumentSession,
   editDocumentHistory,
   getDocument,
+  getDocumentAssets,
+  playbackDocument,
+  importSourceFile,
+  insertAssetFile,
   getDocumentStatus,
   hasUnsavedChanges,
   isDocumentFileOperationPending,
@@ -21,6 +25,7 @@ import {
   exportHtmlFile,
 } from './document-session.js';
 import { inspectHtmlFile, retainHtmlSource } from './html-import.js';
+import { openPlayback } from './playback.js';
 import { applicationMenuTemplate } from './platform.js';
 import { BrowserController } from '../aura/browser-controller.js';
 import { isTrustedRendererUrl, validateDevServerUrl } from './security.js';
@@ -259,6 +264,33 @@ if (!app.requestSingleInstanceLock()) {
     handle(IPC.runtimeInfo, z.tuple([]), () => runtimeInfo());
     handle(IPC.ping, z.tuple([z.unknown()]), ([payload]) => handlePing(payload));
     handle(IPC.getDocument, z.tuple([]), () => getDocument());
+    handle(IPC.getDocumentAssets, z.tuple([]), () => getDocumentAssets());
+    handle(IPC.playDocument, z.tuple([z.unknown()]), ([request]) =>
+      playbackDocument(request, openPlayback),
+    );
+    handle(IPC.insertAsset, z.tuple([z.unknown()]), ([request]) =>
+      insertAssetFile(request, async (kind) => {
+        if (!mainWindow) return null;
+        const result = await dialog.showOpenDialog(mainWindow, {
+          title: `选择${kind}素材`,
+          properties: ['openFile'],
+          filters: [
+            {
+              name: kind,
+              extensions:
+                kind === 'image'
+                  ? ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif']
+                  : kind === 'font'
+                    ? ['woff', 'woff2', 'ttf', 'otf']
+                    : kind === 'audio'
+                      ? ['mp3', 'wav', 'ogg', 'm4a']
+                      : ['mp4', 'webm', 'ogg'],
+            },
+          ],
+        });
+        return result.canceled ? null : (result.filePaths[0] ?? null);
+      }),
+    );
     handle(IPC.getDocumentStatus, z.tuple([]), () => getDocumentStatus());
     handle(IPC.editHistory, z.tuple([z.unknown()]), ([request]) => editDocumentHistory(request));
     const chooseSave = async (htmlOnly = false): Promise<string | null> => {
@@ -288,6 +320,42 @@ if (!app.requestSingleInstanceLock()) {
       });
       return result.response === 1;
     };
+    handle(IPC.importSourceHtml, z.tuple([z.unknown()]), ([request]) =>
+      importSourceFile(
+        request,
+        async () => {
+          if (!mainWindow) return null;
+          const result = await dialog.showOpenDialog(mainWindow, {
+            title: '导入 HTML（保留动态效果）',
+            properties: ['openFile'],
+            filters: [{ name: 'HTML', extensions: ['html', 'htm'] }],
+          });
+          return result.canceled ? null : (result.filePaths[0] ?? null);
+        },
+        confirmDiscard,
+        async () => {
+          if (!mainWindow) return null;
+          const result = await dialog.showOpenDialog(mainWindow, {
+            title: '授权读取 HTML 所需的素材目录',
+            properties: ['openDirectory'],
+          });
+          return result.canceled ? null : (result.filePaths[0] ?? null);
+        },
+        async () => {
+          if (!mainWindow) return false;
+          const result = await dialog.showMessageBox(mainWindow, {
+            type: 'question',
+            message: '此 HTML 引用了远程静态资源，是否收集用于离线封装？',
+            detail: '不携带登录凭据。不支持在线接口或本机、局域网地址。',
+            buttons: ['取消收集', '收集静态资源'],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+          });
+          return result.response === 1;
+        },
+      ),
+    );
     for (const [channel, saveAs] of [
       [IPC.saveDocument, false],
       [IPC.saveDocumentAs, true],

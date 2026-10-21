@@ -38,6 +38,9 @@ export {
   findSlide,
   geometrySchema,
   imageElementSchema,
+  mediaElementSchema,
+  sourceElementSchema,
+  entranceSchema,
   MAX_COORDINATE,
   MAX_DIMENSION,
   parseDocument,
@@ -88,6 +91,7 @@ export {
   presentationTargetSchema,
   slideCreatePayloadSchema,
   slideTargetSchema,
+  slideUpdatePropertiesPayloadSchema,
 } from './command.js';
 export type {
   CommandEnvelope,
