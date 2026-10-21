@@ -474,9 +474,9 @@ try {
       .frameLocator('iframe')
       .locator('#heading')
       .evaluate((node) => ({
-        fontSize: getComputedStyle(node).fontSize,
+        fontSize: window.getComputedStyle(node).fontSize,
         x: node.getBoundingClientRect().x,
-        opacity: getComputedStyle(node).opacity,
+        opacity: window.getComputedStyle(node).opacity,
       })),
     { fontSize: '48px', x: 104 + drag.delta, opacity: '0.7' },
   );
