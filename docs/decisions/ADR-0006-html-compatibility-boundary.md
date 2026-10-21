@@ -56,5 +56,34 @@ presentations. This authorizes the following slice without accepting every futur
   HTML file regenerates from Core and keeps the existing fingerprint/backup protections. Export is a
   separate derived snapshot; it does not clear dirty state or change the active file binding.
 
-Original HTML is immutable provenance, not a second editable authority. The general restricted-source
-component model and a third-party plugin API remain Proposed and unimplemented.
+Original HTML is immutable provenance, not a second editable authority. A third-party plugin API
+remains Proposed and unimplemented.
+
+## Owner-authorized packaged source components — 2026-10-21
+
+The owner requested two sequential increments: self-contained offline HTML with dynamic content and
+round trips, followed by bounded internal source-element editing. This extends the experimental
+slice; it does not accept every proposal in this ADR or change Aura's inert preview policy.
+
+Core 1.1 adds media/source asset references, source revisions, entrances and slide transitions. Core
+still contains no resource bytes, DOM or platform code. Bundle v2 stores the validated document plus
+SHA-256-addressed resources; old JSON/HTML v1 remain readable. The document body retains its 20 MiB
+limit; resource-containing files and final UTF-8 HTML have a 100 MiB cap including base64 overhead.
+Upgrade saves cannot replace the old bound file. Existing atomic writes/conflict backups remain.
+
+Source import parses detached DOM in an isolated helper without loading or executing source code.
+Main collects only native-dialog-granted local resources and explicitly requested, credential-free
+public HTTPS resources. Static module/CSS dependencies are rewritten to content addresses. Missing
+resources, APIs/computed dependencies, nested frames, unsupported srcset and cyclic imports refuse
+the complete import/export rather than producing a misleading offline-success result.
+
+The same derived player is used for exported HTML and a separate unprivileged playback window.
+Native audio/video have explicit controls. Source frames have opaque origins and no scripts until
+the user enables them; they never get same-origin, Node, preload, file grants or editor IPC. Resource
+CSP allows only embedded data, while connect/object/form/base access stays denied. Main additionally
+intercepts network, denies permissions, downloads, popups and navigation. The editor's script policy
+and Aura's script/network policy remain unchanged; the shell only adds embedded-font loading.
+
+Original HTML bytes remain immutable resources. Supported internal edits produce new source assets
+through commands/revision checks; a live DOM is never adopted as document state. This is not a promise
+of arbitrary HTML fidelity, arbitrary script analysis or arbitrary DOM-native equivalence.

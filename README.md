@@ -96,6 +96,22 @@ Supported development targets are Windows x64 and macOS ARM64; see [platform con
 
 ## Save and reopen (P2A)
 
+### Offline HTML bundles
+
+The document menu includes **导入 HTML（保留动态效果）** alongside the existing lossy native
+conversion. The source mode retains a complete HTML component and collects its supported static
+dependencies behind native directory/network prompts. Use the inspector to insert images, fonts,
+audio/video and configure fade/slide entrances, click steps and slide transitions. **导出 HTML**
+produces one offline file, including editable metadata and resources, at most **100 MiB** including
+encoding overhead. Native saves retain those same resources. Legacy files remain readable; format
+upgrades require saving a separate copy.
+
+The offline player includes full screen, keyboard navigation and an explicit source-script toggle.
+It has no editor/Node/filesystem bridge; network, nested frames and dynamic API dependencies are
+unsupported. Missing resources, computed imports and dependency cycles are reported rather than
+silently omitted. System fonts use the receiver's installed fonts unless a font file is embedded.
+See [bundle delivery and evidence](docs/reports/packaged-html.md).
+
 Build with `pnpm build`, then `pnpm --filter @auralide/desktop start`. Apply a text edit and choose
 **保存** in the title bar. Main opens a native file dialog; no path is accepted from the
 renderer. Subsequent saves retain uniquely named `.bak` recovery files beside the document. These

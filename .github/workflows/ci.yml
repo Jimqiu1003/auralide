@@ -71,6 +71,9 @@ jobs:
       - name: Basic properties, history, presentation and real restart
         run: node apps/desktop/test/editing.electron.mjs
 
+      - name: Offline bundle, dynamic source isolation and real restart
+        run: node apps/desktop/test/bundle.electron.mjs
+
       - name: Package self-contained Windows portable preview
         if: matrix.target == 'windows-x64'
         run: node apps/desktop/scripts/package-portable.mjs

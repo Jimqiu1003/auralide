@@ -15,7 +15,7 @@ import type { Result } from './result.js';
  */
 
 /** Version of the document format. Bumped when the shape changes; validated inside the schema. */
-export const SCHEMA_VERSION = '1.0';
+export const SCHEMA_VERSION = '1.1';
 
 /** Largest permitted absolute `x` / `y` coordinate, in CSS pixels. */
 export const MAX_COORDINATE = 1_000_000;
@@ -61,6 +61,14 @@ export type Geometry = DeepReadonly<z.output<typeof geometrySchema>>;
 
 /** Optional text styling. Every field stays optional so a style can be refined incrementally. */
 export const textStyleSchema = z.strictObject({
+  fontFamily: z
+    .string()
+    .regex(/^[\p{L}\p{N} _-]{1,100}$/u)
+    .optional(),
+  fontAssetId: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
   fontSize: dimensionSchema.optional(),
   fontWeight: z.int().min(1).max(1000).optional(),
   color: z.string().min(1).max(100).optional(),
@@ -69,12 +77,26 @@ export const textStyleSchema = z.strictObject({
 export type TextStyle = DeepReadonly<z.output<typeof textStyleSchema>>;
 
 /** Fields every element carries, whatever its kind. */
+export const entranceSchema = z.strictObject({
+  effect: z.enum(['none', 'fade', 'slide']),
+  trigger: z.enum(['page', 'click']),
+  duration: z.number().min(0).max(10000),
+});
+export const elementCommonPropertiesSchema = z.strictObject({
+  entrance: entranceSchema.optional(),
+  assetId: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
+  expectedSourceRevision: z.int().min(0).optional(),
+});
 const elementCommonShape = {
   name: z.string().min(1).max(200).optional(),
   geometry: geometrySchema,
   rotation: z.number().min(-360).max(360).optional(),
   opacity: z.number().min(0).max(1).optional(),
   zIndex: z.int().optional(),
+  entrance: entranceSchema.optional(),
 };
 
 /** Text element. */
@@ -108,11 +130,32 @@ export const imageElementSchema = z.strictObject({
 });
 export type ImageElement = DeepReadonly<z.output<typeof imageElementSchema>>;
 
+export const mediaElementSchema = z.strictObject({
+  id: elementIdSchema,
+  kind: z.enum(['audio', 'video']),
+  assetId: z.string().regex(/^[a-f0-9]{64}$/),
+  alt: z.string().max(500).optional(),
+  ...elementCommonShape,
+});
+export const sourceElementSchema = z.strictObject({
+  id: elementIdSchema,
+  kind: z.literal('source'),
+  assetId: z.string().regex(/^[a-f0-9]{64}$/),
+  sourceRevision: z.int().min(0),
+  originalAssetId: z
+    .string()
+    .regex(/^[a-f0-9]{64}$/)
+    .optional(),
+  ...elementCommonShape,
+});
+
 /** Any element that can live on a slide. */
 export const elementSchema = z.discriminatedUnion('kind', [
   textElementSchema,
   shapeElementSchema,
   imageElementSchema,
+  mediaElementSchema,
+  sourceElementSchema,
 ]);
 export type Element = DeepReadonly<z.output<typeof elementSchema>>;
 /** Discriminator of an element. */
@@ -123,6 +166,7 @@ export const slideSchema = z.strictObject({
   id: slideIdSchema,
   name: z.string().min(1).max(200).optional(),
   backgroundColor: z.string().min(1).max(100).optional(),
+  transition: z.enum(['none', 'fade', 'slide']).optional(),
   elements: z.array(elementSchema),
 });
 export type Slide = DeepReadonly<z.output<typeof slideSchema>>;
@@ -157,7 +201,7 @@ export type Revision = z.output<typeof revisionSchema>;
 /** A whole presentation document. */
 export const presentationSchema = z
   .strictObject({
-    schemaVersion: z.literal(SCHEMA_VERSION),
+    schemaVersion: z.enum(['1.0', SCHEMA_VERSION]),
     id: presentationIdSchema,
     title: z.string().max(500),
     revision: revisionSchema,

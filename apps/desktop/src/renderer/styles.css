@@ -1024,3 +1024,25 @@ body:has(.shell) {
 .layer-item[aria-pressed='true'] {
   box-shadow: inset 2px 0 var(--accent);
 }
+
+.bundle-controls {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 20px 0;
+  padding: 0;
+  border: 0;
+}
+.bundle-controls legend {
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.bundle-controls label {
+  display: grid;
+  gap: 6px;
+}
+.bundle-controls select,
+.bundle-controls input {
+  width: 100%;
+  min-width: 0;
+}

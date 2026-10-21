@@ -96,8 +96,10 @@ const parseFailureCode = (json: string): DocumentErrorCode => {
 
 describe('SCHEMA_VERSION', () => {
   it('is declared explicitly and validated by the schema', () => {
-    expect(SCHEMA_VERSION).toBe('1.0');
-    expect(accepts(documentInput()).schemaVersion).toBe('1.0');
+    expect(SCHEMA_VERSION).toBe('1.1');
+    expect(accepts({ ...documentInput(), schemaVersion: '1.1' }).schemaVersion).toBe('1.1');
+    expect(accepts(documentInput()).schemaVersion).toBe('1.1');
+    expect(accepts({ ...documentInput(), schemaVersion: '1.0' }).schemaVersion).toBe('1.0');
     rejects({ ...documentInput(), schemaVersion: '2.0' });
     rejects({ ...documentInput(), schemaVersion: 1 });
   });

@@ -7,5 +7,15 @@ import type { Layer } from '@auralide/core';
  * P1 adds the first real module behind this boundary.
  */
 export const layer: Layer = 'exporters';
+export {
+  addAsset,
+  validateBundle,
+  serializeBundle,
+  readBundleJson,
+  readBundleHtml,
+  MAX_BUNDLE_BYTES,
+  assertBundleSize,
+} from './bundle.js';
+export type { DocumentBundle } from './bundle.js';
 
 export { exportPresentationHtml } from './html.js';
