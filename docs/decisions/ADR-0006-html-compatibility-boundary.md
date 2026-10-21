@@ -87,3 +87,22 @@ and Aura's script/network policy remain unchanged; the shell only adds embedded-
 Original HTML bytes remain immutable resources. Supported internal edits produce new source assets
 through commands/revision checks; a live DOM is never adopted as document state. This is not a promise
 of arbitrary HTML fidelity, arbitrary script analysis or arbitrary DOM-native equivalence.
+
+### Internal source editing implementation
+
+The source editor is a separate inert WebContentsView, with source scripts disabled, no preload,
+Node or file/network grants. Only fixed main-owned selection/inspection code executes. A keyboard
+node list and numeric controls accompany native pointer selection/dragging. Transient DOM highlights
+and drag previews are discarded; a detached parser patches the canonical source, then the same
+collector validates its dependency graph. Core adopts the resulting hash through
+`element.updateProperties` with both document revision and expected source revision. Resource bytes
+remain in the session asset pool, outside Core history; export selects the active dependency closure
+plus immutable original-source provenance, retaining historical bytes only for session undo/redo.
+
+Stable `data-auralide-node` identifiers survive supported patches; a full source scan assigns IDs to
+new nodes and rejects invalid/duplicate IDs. Old revision requests and missing nodes are rejected. Ordinary
+leaf text, IMG replacement, embedded fonts, literal appearance styles and size/relative translation
+are supported. Original layout/transform properties are not rebuilt. Complex translation expressions,
+script-created nodes, chart models and Canvas/WebGL internals require canonical source editing.
+The inert preview cannot select a script-generated runtime node. A changed canonical source requires
+refresh/reselection; conflicting unapplied inputs are retained and blocked from overwriting it.

@@ -13,6 +13,13 @@ export const IPC = {
   ping: 'auralide:ping',
   getDocument: 'auralide:get-document',
   getDocumentAssets: 'auralide:get-document-assets',
+  openSourceEditor: 'auralide:open-source-editor',
+  selectSourceNode: 'auralide:select-source-node',
+  getSourceSelection: 'auralide:get-source-selection',
+  editSource: 'auralide:edit-source',
+  replaceSourceAsset: 'auralide:replace-source-asset',
+  closeSourceEditor: 'auralide:close-source-editor',
+  sourceSetBounds: 'auralide:source-bounds',
   playDocument: 'auralide:play-document',
   importSourceHtml: 'auralide:import-source-html',
   insertAsset: 'auralide:insert-asset',
@@ -38,4 +45,4 @@ export const IPC_ALLOW_LIST: readonly IpcChannel[] = Object.freeze(Object.values
 export const BRIDGE_GLOBAL = 'auralide';
 
 /** Version of the bridge surface itself; bumped when the exposed API shape changes. */
-export const BRIDGE_VERSION = '1.7.0';
+export const BRIDGE_VERSION = '1.8.0';

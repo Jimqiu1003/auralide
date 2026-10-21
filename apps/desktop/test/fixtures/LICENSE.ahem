@@ -1,0 +1,9 @@
+Ahem was developed by Todd Fahrner and Myles C. Maxfield.
+W3C declares Ahem public domain, with a Creative Commons Zero declaration where applicable:
+https://www.w3.org/Style/CSS/Test/Fonts/Ahem/
+
+This unmodified font is sourced from Web Platform Tests:
+https://github.com/web-platform-tests/wpt/blob/master/fonts/Ahem.ttf
+Source blob: 4d4785a4123287a5ca08439a6230514de91df0e7
+
+It is a regression-testing font. Most glyphs intentionally render as boxes.

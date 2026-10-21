@@ -23,6 +23,19 @@ const api: AuralideApi = Object.freeze({
   ping: (request: PingRequest): Promise<PingResponse> => ipcRenderer.invoke(IPC.ping, request),
   getDocument: (): Promise<Presentation> => ipcRenderer.invoke(IPC.getDocument),
   getDocumentAssets: () => ipcRenderer.invoke(IPC.getDocumentAssets),
+  openSourceEditor: (request: Parameters<AuralideApi['openSourceEditor']>[0]) =>
+    ipcRenderer.invoke(IPC.openSourceEditor, request),
+  selectSourceNode: (request: Parameters<AuralideApi['selectSourceNode']>[0]) =>
+    ipcRenderer.invoke(IPC.selectSourceNode, request),
+  getSourceSelection: (request: Parameters<AuralideApi['getSourceSelection']>[0]) =>
+    ipcRenderer.invoke(IPC.getSourceSelection, request),
+  editSource: (request: Parameters<AuralideApi['editSource']>[0]) =>
+    ipcRenderer.invoke(IPC.editSource, request),
+  replaceSourceAsset: (request: Parameters<AuralideApi['replaceSourceAsset']>[0]) =>
+    ipcRenderer.invoke(IPC.replaceSourceAsset, request),
+  closeSourceEditor: () => ipcRenderer.invoke(IPC.closeSourceEditor),
+  sourceSetBounds: (request: Parameters<AuralideApi['sourceSetBounds']>[0]) =>
+    ipcRenderer.invoke(IPC.sourceSetBounds, request),
   playDocument: (request: Parameters<AuralideApi['playDocument']>[0]) =>
     ipcRenderer.invoke(IPC.playDocument, request),
   importSourceHtml: (request: Parameters<AuralideApi['importSourceHtml']>[0]) =>

@@ -10,6 +10,7 @@ import {
   readBundleJson,
   MAX_BUNDLE_BYTES,
   assertBundleSize,
+  referencedAssets,
 } from './bundle.js';
 import { exportPresentationHtml } from './html.js';
 
@@ -22,6 +23,45 @@ const doc = presentationSchema.parse({
   slides: [{ id: 'slide_bundle', elements: [] }],
 });
 describe('self-contained bundles', () => {
+  it('exports only current dependency closure while retaining original source provenance', () => {
+    const assets: Record<string, Asset> = {};
+    const image = addAsset(assets, Buffer.from('image'), 'image/png');
+    const css = addAsset(
+      assets,
+      Buffer.from(`p{background:url(auralide-asset:${image})}`),
+      'text/css',
+    );
+    const original = addAsset(assets, Buffer.from('<p>original</p>'), 'text/html');
+    const source = addAsset(
+      assets,
+      Buffer.from(`<link href="auralide-asset:${css}">`),
+      'text/html',
+    );
+    const obsolete = addAsset(assets, Buffer.from('obsolete'), 'image/png');
+    const current = presentationSchema.parse({
+      ...doc,
+      slides: [
+        {
+          id: 'slide_bundle',
+          elements: [
+            {
+              id: 'el_source',
+              kind: 'source',
+              assetId: source,
+              originalAssetId: original,
+              sourceRevision: 1,
+              geometry: { x: 0, y: 0, width: 1280, height: 720 },
+            },
+          ],
+        },
+      ],
+    });
+    const selected = referencedAssets(current, assets);
+    expect(Object.keys(selected).sort()).toEqual([image, css, original, source].sort());
+    expect(readBundleJson(serializeBundle(current, assets))?.assets).toEqual(selected);
+    expect(assets[obsolete]).toBeDefined();
+    expect(() => referencedAssets(current, { [source]: assets[source]! })).toThrow(/缺少资源/);
+  });
   it('deduplicates bytes and reopens native JSON and HTML without executing source', () => {
     const assets: Record<string, Asset> = {};
     const id = addAsset(

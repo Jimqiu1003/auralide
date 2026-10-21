@@ -1,5 +1,7 @@
 import fs from 'node:fs/promises';
 import { relative, isAbsolute, extname } from 'node:path';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { fileURLToPath } from 'node:url';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
@@ -117,6 +119,7 @@ interface CollectionOptions {
   readonly allowRemote: () => Promise<boolean>;
   readonly assets?: Assets;
   readonly packaged?: boolean;
+  readonly rebaseLocal?: boolean;
 }
 export async function collectSource(
   source: string,
@@ -139,7 +142,7 @@ export async function collectSource(
       if (!assets[id]) throw new Error(`缺少封装依赖：${id}`);
       return id;
     }
-    const url = new URL(raw, owner);
+    let url = new URL(raw, owner);
     const key = kind + ':' + url.href;
     if (cache.has(key)) return cache.get(key)!;
     if (active.has(key) || active.size > 32) throw new Error(`循环资源依赖或深度超限：${raw}`);
@@ -160,6 +163,12 @@ export async function collectSource(
           root = grant ? await fs.realpath(grant) : null;
         }
         if (!root) throw new Error('未授权素材目录，无法完整封装。');
+        if (
+          options.rebaseLocal &&
+          owner.href === base.href &&
+          !/^(?:[a-z][a-z0-9+.-]*:|\/|\\)/i.test(raw)
+        )
+          url = new URL(raw, pathToFileURL(join(root, 'index.html')));
         const path = await fs.realpath(fileURLToPath(url));
         const rel = relative(root, path);
         if (rel === '..' || rel.startsWith('..\\') || rel.startsWith('../') || isAbsolute(rel))
@@ -176,11 +185,15 @@ export async function collectSource(
       total += bytes.length;
       if (total > MAX_BUNDLE_BYTES) throw new Error('资源集合超过 100 MiB。');
       if (kind === 'css') {
-        bytes = Buffer.from(await compileCss(bytes.toString('utf8'), url));
+        bytes = Buffer.from(
+          await compileCss(new TextDecoder('utf-8', { fatal: true }).decode(bytes), url),
+        );
         mime = 'text/css';
       }
       if (kind === 'js') {
-        bytes = Buffer.from(await compileJs(bytes.toString('utf8'), url));
+        bytes = Buffer.from(
+          await compileJs(new TextDecoder('utf-8', { fatal: true }).decode(bytes), url),
+        );
         mime = 'application/javascript';
       }
       if (
@@ -345,7 +358,7 @@ export async function collectSource(
   );
   html = html.replace(
     /<\/head\s*>/i,
-    '<style>@media(prefers-reduced-motion:reduce){html body *,html body *::before,html body *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}</style></head>',
+    '<style data-auralide-player-policy>@media(prefers-reduced-motion:reduce){html body *,html body *::before,html body *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}</style></head>',
   );
   return { assetId: addAsset(assets, Buffer.from(html), 'text/html'), originalAssetId, assets };
 }

@@ -23,7 +23,15 @@ import {
   saveDocumentFile,
   newDocumentFile,
   exportHtmlFile,
+  readSourceSnapshot,
+  sourceReference,
+  editSourceFile,
+  replaceSourceAsset,
 } from './document-session.js';
+import { SourceController } from './source-controller.js';
+import { sourceRequestSchema, sourceChangeSchema, nodeIdSchema } from '../shared/source-editing.js';
+import { DocumentFileError } from './document-files.js';
+import type { FileError } from '../shared/document-files.js';
 import { inspectHtmlFile, retainHtmlSource } from './html-import.js';
 import { openPlayback } from './playback.js';
 import { applicationMenuTemplate } from './platform.js';
@@ -54,6 +62,62 @@ const isTrustedUrl = (url: string): boolean => isTrustedRendererUrl(url, trusted
 
 let mainWindow: BrowserWindow | null = null;
 let aura: BrowserController | null = null;
+let sourceView: SourceController | null = null;
+let sourceEpoch = 0;
+const sourceFailure = (error: unknown): { ok: false; error: FileError } => ({
+  ok: false,
+  error:
+    error instanceof DocumentFileError
+      ? { code: error.code, message: error.message }
+      : {
+          code: 'invalid-document',
+          message: error instanceof Error ? error.message : '源码编辑失败。',
+        },
+});
+const sourceHooks = {
+  grantDirectory: async (): Promise<string | null> => {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: '授权读取 HTML 所需的素材目录',
+      properties: ['openDirectory'],
+    });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  },
+  allowRemote: async (): Promise<boolean> => {
+    if (!mainWindow) return false;
+    const result = await dialog.showMessageBox(mainWindow, {
+      type: 'question',
+      message: '收集此 HTML 的远程静态资源用于离线封装？',
+      detail: '不携带登录凭据。不支持在线接口或本机、局域网地址。',
+      buttons: ['取消收集', '收集静态资源'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    return result.response === 1;
+  },
+  chooseAsset: async (kind: string): Promise<string | null> => {
+    if (!mainWindow) return null;
+    const result = await dialog.showOpenDialog(mainWindow, {
+      title: `选择${kind}素材`,
+      properties: ['openFile'],
+      filters: [
+        {
+          name: kind,
+          extensions:
+            kind === 'image'
+              ? ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif']
+              : kind === 'font'
+                ? ['woff', 'woff2', 'ttf', 'otf']
+                : kind === 'audio'
+                  ? ['mp3', 'wav', 'ogg', 'm4a']
+                  : ['mp4', 'webm'],
+        },
+      ],
+    });
+    return result.canceled ? null : (result.filePaths[0] ?? null);
+  },
+};
 
 /** Derives every fact the renderer is allowed to see from the running process, never from input. */
 const runtimeInfo = (): RuntimeInfo => ({
@@ -194,6 +258,7 @@ const createWindow = (): BrowserWindow => {
     if (answer === 1) event.preventDefault();
   });
   aura = new BrowserController(window, getDocument);
+  sourceView = new SourceController(window);
   window.on('close', (event) => {
     if (isDocumentFileOperationPending()) {
       event.preventDefault();
@@ -221,6 +286,8 @@ const createWindow = (): BrowserWindow => {
     if (mainWindow === window) {
       aura?.dispose();
       aura = null;
+      sourceView?.dispose();
+      sourceView = null;
       mainWindow = null;
       endDocumentSession();
     }
@@ -265,31 +332,92 @@ if (!app.requestSingleInstanceLock()) {
     handle(IPC.ping, z.tuple([z.unknown()]), ([payload]) => handlePing(payload));
     handle(IPC.getDocument, z.tuple([]), () => getDocument());
     handle(IPC.getDocumentAssets, z.tuple([]), () => getDocumentAssets());
+    handle(IPC.openSourceEditor, z.tuple([z.unknown()]), async ([request]) => {
+      const epoch = ++sourceEpoch;
+      try {
+        const snapshot = await readSourceSnapshot(request);
+        if (!snapshot.ok) return snapshot;
+        if (epoch !== sourceEpoch)
+          return { ok: false, error: { code: 'cancelled', message: '源码预览请求已取消。' } };
+        if (!sourceView) throw new Error('源码预览不可用。');
+        aura?.setBounds({ x: 0, y: 0, width: 0, height: 0, visible: false });
+        await sourceView.open(snapshot.value, getDocumentAssets());
+        if (epoch !== sourceEpoch)
+          return { ok: false, error: { code: 'cancelled', message: '源码预览请求已取消。' } };
+        sourceReference(request);
+        return snapshot;
+      } catch (error) {
+        return sourceFailure(error);
+      }
+    });
+    handle(IPC.closeSourceEditor, z.tuple([]), () => {
+      sourceEpoch++;
+      sourceView?.close();
+      return true;
+    });
+    handle(
+      IPC.sourceSetBounds,
+      z.tuple([z.unknown()]),
+      ([bounds]) => sourceView?.setBounds(bounds) ?? false,
+    );
+    handle(IPC.getSourceSelection, z.tuple([z.unknown()]), ([request]) => {
+      try {
+        const ref = sourceReference(request);
+        if (!sourceView?.matches(getDocument().revision, ref.element.assetId))
+          throw new DocumentFileError('stale-revision', '请刷新源码预览，当前输入已保留。');
+        return { ok: true, value: sourceView.readStatus() };
+      } catch (error) {
+        return sourceFailure(error);
+      }
+    });
+    handle(IPC.selectSourceNode, z.tuple([z.unknown()]), async ([input]) => {
+      try {
+        const { nodeId, ...request } = sourceRequestSchema
+          .extend({ nodeId: nodeIdSchema })
+          .parse(input);
+        const ref = sourceReference(request);
+        if (!sourceView?.matches(getDocument().revision, ref.element.assetId))
+          throw new DocumentFileError('stale-revision', '请刷新源码预览。');
+        const value = await sourceView.select(nodeId);
+        sourceReference(request);
+        return { ok: true, value };
+      } catch (error) {
+        return sourceFailure(error);
+      }
+    });
+    handle(IPC.editSource, z.tuple([z.unknown()]), async ([input]) => {
+      try {
+        const { change, ...request } = sourceRequestSchema
+          .extend({ change: sourceChangeSchema })
+          .parse(input);
+        const ref = sourceReference(request);
+        if (
+          change.type !== 'source' &&
+          !sourceView?.matches(getDocument().revision, ref.element.assetId)
+        )
+          throw new DocumentFileError('stale-revision', '请先读取当前源码预览，输入已保留。');
+        const selection = sourceView?.getSelection();
+        if (
+          change.type === 'style' &&
+          (change.styles.offsetX !== undefined || change.styles.offsetY !== undefined) &&
+          selection?.nodeId !== change.nodeId
+        )
+          throw new DocumentFileError('invalid-input', '请先在当前预览中选择要移动的节点。');
+        sourceView?.setBounds({ x: 0, y: 0, width: 0, height: 0, visible: false });
+        return await editSourceFile({ ...request, change }, sourceHooks, selection?.baseTranslate);
+      } catch (error) {
+        return sourceFailure(error);
+      }
+    });
+    handle(IPC.replaceSourceAsset, z.tuple([z.unknown()]), ([input]) => {
+      sourceView?.setBounds({ x: 0, y: 0, width: 0, height: 0, visible: false });
+      return replaceSourceAsset(input, sourceHooks);
+    });
     handle(IPC.playDocument, z.tuple([z.unknown()]), ([request]) =>
       playbackDocument(request, openPlayback),
     );
     handle(IPC.insertAsset, z.tuple([z.unknown()]), ([request]) =>
-      insertAssetFile(request, async (kind) => {
-        if (!mainWindow) return null;
-        const result = await dialog.showOpenDialog(mainWindow, {
-          title: `选择${kind}素材`,
-          properties: ['openFile'],
-          filters: [
-            {
-              name: kind,
-              extensions:
-                kind === 'image'
-                  ? ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'avif']
-                  : kind === 'font'
-                    ? ['woff', 'woff2', 'ttf', 'otf']
-                    : kind === 'audio'
-                      ? ['mp3', 'wav', 'ogg', 'm4a']
-                      : ['mp4', 'webm', 'ogg'],
-            },
-          ],
-        });
-        return result.canceled ? null : (result.filePaths[0] ?? null);
-      }),
+      insertAssetFile(request, sourceHooks.chooseAsset),
     );
     handle(IPC.getDocumentStatus, z.tuple([]), () => getDocumentStatus());
     handle(IPC.editHistory, z.tuple([z.unknown()]), ([request]) => editDocumentHistory(request));
@@ -333,27 +461,8 @@ if (!app.requestSingleInstanceLock()) {
           return result.canceled ? null : (result.filePaths[0] ?? null);
         },
         confirmDiscard,
-        async () => {
-          if (!mainWindow) return null;
-          const result = await dialog.showOpenDialog(mainWindow, {
-            title: '授权读取 HTML 所需的素材目录',
-            properties: ['openDirectory'],
-          });
-          return result.canceled ? null : (result.filePaths[0] ?? null);
-        },
-        async () => {
-          if (!mainWindow) return false;
-          const result = await dialog.showMessageBox(mainWindow, {
-            type: 'question',
-            message: '此 HTML 引用了远程静态资源，是否收集用于离线封装？',
-            detail: '不携带登录凭据。不支持在线接口或本机、局域网地址。',
-            buttons: ['取消收集', '收集静态资源'],
-            defaultId: 0,
-            cancelId: 0,
-            noLink: true,
-          });
-          return result.response === 1;
-        },
+        sourceHooks.grantDirectory,
+        sourceHooks.allowRemote,
       ),
     );
     for (const [channel, saveAs] of [

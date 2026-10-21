@@ -11,6 +11,8 @@ export function BundleControls({
   onMessage,
   updateProperties,
   updateSlide,
+  onEditSource,
+  onPlay,
 }: {
   document: Presentation;
   slide: Slide;
@@ -20,6 +22,8 @@ export function BundleControls({
   onMessage: (message: string) => void;
   updateProperties: (payload: unknown) => Promise<void>;
   updateSlide: (transition: 'none' | 'fade' | 'slide') => Promise<void>;
+  onEditSource: () => void;
+  onPlay: () => Promise<void>;
 }): JSX.Element {
   const [kind, setKind] = useState<'image' | 'audio' | 'video' | 'font'>('image');
   const [pending, setPending] = useState(false);
@@ -44,10 +48,6 @@ export function BundleControls({
       setPending(false);
     }
   };
-  const play = async (): Promise<void> => {
-    const result = await window.auralide?.playDocument({ expectedRevision: document.revision });
-    if (result && !result.ok) onMessage(result.error.message);
-  };
   const entrance = selected?.entrance ?? {
     effect: 'none' as const,
     trigger: 'page' as const,
@@ -56,6 +56,11 @@ export function BundleControls({
   return (
     <fieldset className="property-section bundle-controls" disabled={busy || pending}>
       <legend>素材与动态演示</legend>
+      {selected?.kind === 'source' && (
+        <button type="button" data-testid="edit-source-elements" onClick={onEditSource}>
+          编辑 HTML 内部元素
+        </button>
+      )}
       <label>
         素材类型
         <select
@@ -144,7 +149,7 @@ export function BundleControls({
           </label>
         </>
       )}
-      <button type="button" onClick={() => void play()}>
+      <button type="button" onClick={() => void onPlay()}>
         打开离线封装播放器
       </button>
       <p className="property-note">单文件 HTML 上限 100 MiB；源 HTML 脚本在播放器中由你启用。</p>

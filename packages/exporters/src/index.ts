@@ -15,6 +15,7 @@ export {
   readBundleHtml,
   MAX_BUNDLE_BYTES,
   assertBundleSize,
+  referencedAssets,
 } from './bundle.js';
 export type { DocumentBundle } from './bundle.js';
 

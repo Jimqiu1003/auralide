@@ -16,6 +16,30 @@ async function setup() {
   return path;
 }
 describe('bounded resource collection', () => {
+  it('rebases new local dependencies only after a fresh directory grant and rejects invalid UTF-8', async () => {
+    const path = await setup();
+    await fs.writeFile(join(path, 'replacement.png'), 'image');
+    let grants = 0;
+    const run = (url: string) =>
+      collectSource('edited source', new URL('file:///auralide-source.html'), {
+        rebaseLocal: true,
+        scan: async () => ({
+          html: '<head></head>token',
+          nodes: [],
+          references: [{ token: 'token', kind: url.endsWith('.css') ? 'css' : 'binary', url }],
+        }),
+        grantDirectory: async () => {
+          grants++;
+          return path;
+        },
+        allowRemote: async () => false,
+      });
+    const result = await run('replacement.png');
+    expect(grants).toBe(1);
+    expect(Object.values(result.assets).some((asset) => asset.mime === 'image/png')).toBe(true);
+    await fs.writeFile(join(path, 'broken.css'), Buffer.from([0xff, 0xfe]));
+    await expect(run('broken.css')).rejects.toThrow();
+  });
   it('recursively collects local CSS, repeated images and static modules', async () => {
     const path = await setup();
     await fs.writeFile(join(path, 'image.png'), Buffer.from('png'));

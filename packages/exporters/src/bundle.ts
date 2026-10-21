@@ -97,8 +97,36 @@ export function validateBundle(input: unknown): DocumentBundle {
   for (const id of Object.keys(assets)) visit(id, []);
   return { format: 'auralide-bundle-v2', document, assets };
 }
+export function referencedAssets(document: Presentation, assets: Assets): Assets {
+  const selected: Record<string, Asset> = Object.create(null) as Record<string, Asset>;
+  const visit = (id: string, depth = 0): void => {
+    if (depth > 32) throw new Error('资源依赖过深。');
+    if (selected[id]) return;
+    const asset = assets[id];
+    if (!asset) throw new Error(`缺少资源：${id}`);
+    selected[id] = asset;
+    if (/^(text\/|application\/)/.test(asset.mime))
+      for (const match of Buffer.from(asset.base64, 'base64')
+        .toString('utf8')
+        .matchAll(/auralide-(?:asset|style|event):([a-f0-9]{64})/g))
+        visit(match[1]!, depth + 1);
+  };
+  for (const slide of document.slides)
+    for (const element of slide.elements) {
+      if ('assetId' in element) visit(element.assetId);
+      if (element.kind === 'source' && element.originalAssetId) visit(element.originalAssetId);
+      if (element.kind === 'text' && element.style?.fontAssetId) visit(element.style.fontAssetId);
+    }
+  return selected;
+}
 export function serializeBundle(document: Presentation, assets: Assets): string {
-  const text = JSON.stringify(validateBundle({ format: 'auralide-bundle-v2', document, assets }));
+  const text = JSON.stringify(
+    validateBundle({
+      format: 'auralide-bundle-v2',
+      document,
+      assets: referencedAssets(document, assets),
+    }),
+  );
   assertBundleSize(Buffer.byteLength(text));
   return text;
 }

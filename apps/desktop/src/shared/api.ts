@@ -9,6 +9,14 @@ import type { CommandEnvelope, CommandError, Presentation, Result } from '@aural
 import type { AuraRequest, AuraResult } from '@auralide/agent';
 import type { FileResult } from './document-files.js';
 import type { Assets } from '@auralide/renderer';
+import type {
+  SourceRequest,
+  SourceSnapshot,
+  SourceSelection,
+  SourceChange,
+  SourceViewStatus,
+  SourceResult,
+} from './source-editing.js';
 
 /** How the window was loaded. The two paths differ only in this. */
 export type LoadPath = 'development' | 'production';
@@ -58,6 +66,23 @@ export type AuralideApi = {
   readonly ping: (request: PingRequest) => Promise<PingResponse>;
   readonly getDocument: () => Promise<Presentation>;
   readonly getDocumentAssets: () => Promise<Assets>;
+  readonly openSourceEditor: (request: SourceRequest) => Promise<SourceResult<SourceSnapshot>>;
+  readonly selectSourceNode: (
+    request: SourceRequest & { nodeId: string },
+  ) => Promise<SourceResult<SourceSelection>>;
+  readonly getSourceSelection: (request: SourceRequest) => Promise<SourceResult<SourceViewStatus>>;
+  readonly editSource: (request: SourceRequest & { change: SourceChange }) => Promise<FileResult>;
+  readonly replaceSourceAsset: (
+    request: SourceRequest & { nodeId: string; kind: 'image' | 'font' },
+  ) => Promise<FileResult>;
+  readonly closeSourceEditor: () => Promise<boolean>;
+  readonly sourceSetBounds: (bounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    visible: boolean;
+  }) => Promise<boolean>;
   readonly playDocument: (request: { expectedRevision: number }) => Promise<FileResult>;
   readonly importSourceHtml: (request: { expectedRevision: number }) => Promise<FileResult>;
   readonly insertAsset: (request: {

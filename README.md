@@ -112,12 +112,23 @@ unsupported. Missing resources, computed imports and dependency cycles are repor
 silently omitted. System fonts use the receiver's installed fonts unless a font file is embedded.
 See [bundle delivery and evidence](docs/reports/packaged-html.md).
 
+Select an imported source component and choose **编辑 HTML 内部元素**. Its separate inert preview
+supports selecting ordinary nodes, leaf text edits, image/font replacement and appearance/size
+changes. Dragging changes an offset relative to the original layout. The node list and numeric
+controls provide keyboard alternatives; Tab returns from the native preview, Escape closes it.
+The **源码** tab edits the canonical source and checks dependencies before adoption. Every successful
+change is a source-versioned Core command with session undo/redo. Unapplied text/source inputs stay
+in the current session; resolve them before saving or exporting. Conflicting source versions and
+missing nodes are refused. Chart/Canvas/WebGL internals require source edits and playback inspection;
+the editing preview never runs imported scripts.
+
 Build with `pnpm build`, then `pnpm --filter @auralide/desktop start`. Apply a text edit and choose
 **保存** in the title bar. Main opens a native file dialog; no path is accepted from the
 renderer. Subsequent saves retain uniquely named `.bak` recovery files beside the document. These
 backups are not automatically deleted. Reopen with **打开**, including after restarting.
 Opening or closing over unsaved edits requires confirmation. A file changed by another program is
-refused rather than silently overwritten. Documents are limited to 20 MiB in this experimental slice.
+refused rather than silently overwritten. The structured document body is limited to 20 MiB;
+resource-containing files and exported HTML are limited to 100 MiB.
 
 Reopen preserves content/IDs, starts empty undo history and advances the session revision to reject
 stale intent. Switch to Aura to preview the reopened current slide. This snapshot format does not persist command history.
