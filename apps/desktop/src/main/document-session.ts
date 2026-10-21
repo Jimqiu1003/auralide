@@ -21,10 +21,14 @@ import {
   serializeBundle,
   addAsset,
   validateBundle,
+  referencedAssets,
 } from '@auralide/exporters';
 import type { Asset, Assets } from '@auralide/renderer';
 import { collectSource, MIME_BY_EXTENSION } from './resource-collector.js';
-import { scanSource } from './source-dom.js';
+import { scanSource, sourceDomTool } from './source-dom.js';
+import { patchSourceHtml } from '@auralide/html-bridge';
+import { sourceRequestSchema, sourceChangeSchema, nodeIdSchema } from '../shared/source-editing.js';
+import type { SourceSnapshot, SourceResult } from '../shared/source-editing.js';
 import type { HtmlSnapshot, HtmlImportReport } from '@auralide/html-bridge';
 import { z } from 'zod';
 
@@ -78,6 +82,60 @@ const fileRequestSchema = z.strictObject({ expectedRevision: revisionSchema });
 
 export const getDocument = (): Presentation => state.document;
 export const getDocumentAssets = (): Assets => assets;
+export function sourceReference(input: unknown) {
+  const request = sourceRequestSchema.safeParse(input);
+  if (!request.success) throw new DocumentFileError('invalid-input', '无效的源码编辑请求。');
+  if (request.data.expectedRevision !== state.document.revision)
+    throw new DocumentFileError('stale-revision', '文档已改变，请读取最新源码；当前输入已保留。');
+  const slide = state.document.slides.find((s) => s.id === request.data.slideId),
+    element = slide?.elements.find((e) => e.id === request.data.elementId);
+  if (!element || element.kind !== 'source')
+    throw new DocumentFileError('invalid-input', '源码组件已不存在。');
+  if (element.sourceRevision !== request.data.expectedSourceRevision)
+    throw new DocumentFileError('stale-revision', '源码版本已改变，请重新选择。');
+  const resource = assets[element.assetId];
+  if (resource?.mime !== 'text/html')
+    throw new DocumentFileError('invalid-document', '源码资源缺失。');
+  return { request: request.data, element };
+}
+const sourceHtml = (assetId: string): string =>
+  Buffer.from(assets[assetId]!.base64, 'base64')
+    .toString('utf8')
+    .replace(/auralide-(style|event):([a-f0-9]{64})/g, (_match, _kind: string, id: string) => {
+      const asset = assets[id];
+      if (!asset) throw new Error('源码属性资源缺失。');
+      return Buffer.from(asset.base64, 'base64')
+        .toString('utf8')
+        .replace(/[&"<>]/g, (c) => ({ '&': '&amp;', '"': '&quot;', '<': '&lt;', '>': '&gt;' })[c]!);
+    });
+export async function readSourceSnapshot(input: unknown): Promise<SourceResult<SourceSnapshot>> {
+  try {
+    if (fileOperation) throw new DocumentFileError('busy', '文件操作尚未完成。');
+    const reference = sourceReference(input),
+      document = state.document,
+      html = sourceHtml(reference.element.assetId);
+    const scan = await scanSource(html);
+    sourceReference(input);
+    return ok({
+      document,
+      sourceRevision: reference.element.sourceRevision,
+      assetId: reference.element.assetId,
+      html,
+      nodes: scan.nodes,
+      width: reference.element.geometry.width,
+      height: reference.element.geometry.height,
+    });
+  } catch (error) {
+    return err(
+      error instanceof DocumentFileError
+        ? fileError(error)
+        : {
+            code: 'invalid-document',
+            message: error instanceof Error ? error.message : '源码无法读取。',
+          },
+    );
+  }
+}
 export const playbackDocument = (
   input: unknown,
   play: (html: string) => Promise<void>,
@@ -493,7 +551,7 @@ export const insertAssetFile = (
     validateBundle({
       format: 'auralide-bundle-v2',
       document: result.value.state.document,
-      assets: nextAssets,
+      assets: referencedAssets(result.value.state.document, nextAssets),
     });
     state = result.value.state;
     assets = nextAssets;
@@ -505,6 +563,114 @@ export const insertAssetFile = (
     };
   });
 };
+
+interface SourceEditHooks {
+  grantDirectory: () => Promise<string | null>;
+  allowRemote: () => Promise<boolean>;
+  chooseAsset: (kind: 'image' | 'font') => Promise<string | null>;
+}
+export const editSourceFile = (
+  input: unknown,
+  hooks: SourceEditHooks,
+  baseTranslate?: string,
+): Promise<FileResult> => {
+  const parsed = sourceRequestSchema.extend({ change: sourceChangeSchema }).safeParse(input);
+  if (!parsed.success)
+    return Promise.resolve(err({ code: 'invalid-input', message: '源码修改参数无效。' }));
+  const { change, ...request } = parsed.data;
+  return runFileOperation({ expectedRevision: request.expectedRevision }, async () => {
+    const reference = sourceReference(request);
+    let html = sourceHtml(reference.element.assetId);
+    if (change.type === 'source') html = change.html;
+    else
+      html = await sourceDomTool<string>(patchSourceHtml.toString(), {
+        html,
+        nodeId: change.nodeId,
+        change: change.type === 'text' ? { text: change.text } : { styles: change.styles },
+        ...(baseTranslate === undefined ? {} : { baseTranslate }),
+      });
+    const collected = await collectSource(html, new URL('file:///auralide-source.html'), {
+      scan: scanSource,
+      grantDirectory: hooks.grantDirectory,
+      allowRemote: hooks.allowRemote,
+      assets,
+      packaged: true,
+      rebaseLocal: true,
+    });
+    return adoptSourceChange(reference, collected.assetId, collected.assets);
+  });
+};
+export const replaceSourceAsset = (input: unknown, hooks: SourceEditHooks): Promise<FileResult> => {
+  const parsed = sourceRequestSchema
+    .extend({ nodeId: nodeIdSchema, kind: z.enum(['image', 'font']) })
+    .safeParse(input);
+  if (!parsed.success)
+    return Promise.resolve(err({ code: 'invalid-input', message: '源码素材请求无效。' }));
+  const { kind, nodeId, ...request } = parsed.data;
+  return runFileOperation({ expectedRevision: request.expectedRevision }, async () => {
+    const reference = sourceReference(request);
+    const path = await hooks.chooseAsset(kind);
+    if (!path) throw new DocumentFileError('cancelled', '素材选择已取消。');
+    const mime = MIME_BY_EXTENSION[extname(path).toLowerCase()] ?? '';
+    if (!mime.startsWith(kind + '/')) throw new Error('素材类型不符。');
+    const bytes = await readResourceBytes(path);
+    if (
+      mime === 'image/svg+xml' &&
+      /<script\b|<foreignObject\b|(?:href|src)\s*=\s*["'](?!#|data:)|url\(/i.test(
+        bytes.toString('utf8'),
+      )
+    )
+      throw new Error('SVG 必须自包含且无脚本。');
+    const nextAssets = { ...assets },
+      id = addAsset(nextAssets, bytes, mime);
+    const html = await sourceDomTool<string>(patchSourceHtml.toString(), {
+      html: sourceHtml(reference.element.assetId),
+      nodeId,
+      change: kind === 'image' ? { assetId: id } : { fontAssetId: id },
+    });
+    const collected = await collectSource(html, new URL('file:///auralide-source.html'), {
+      scan: scanSource,
+      grantDirectory: hooks.grantDirectory,
+      allowRemote: hooks.allowRemote,
+      assets: nextAssets,
+      packaged: true,
+      rebaseLocal: true,
+    });
+    return adoptSourceChange(reference, collected.assetId, collected.assets);
+  });
+};
+function adoptSourceChange(
+  reference: ReturnType<typeof sourceReference>,
+  assetId: string,
+  nextAssets: Record<string, Asset>,
+): FileOutcome {
+  sourceReference(reference.request);
+  const result = applyCommand(state, {
+    operation: 'element.updateProperties',
+    target: {
+      kind: 'element',
+      slideId: reference.request.slideId,
+      elementId: reference.element.id,
+    },
+    payload: { assetId, expectedSourceRevision: reference.element.sourceRevision },
+    expectedRevision: state.document.revision,
+    origin: { kind: 'human', id: 'source-editor' },
+  });
+  if (!result.ok) throw new Error(result.error.message);
+  validateBundle({
+    format: 'auralide-bundle-v2',
+    document: result.value.state.document,
+    assets: referencedAssets(result.value.state.document, nextAssets),
+  });
+  state = result.value.state;
+  assets = nextAssets;
+  return {
+    document: state.document,
+    fileName: state.document.title,
+    backupCreated: false,
+    historyReset: false,
+  };
+}
 
 export const importSourceFile = (
   input: unknown,

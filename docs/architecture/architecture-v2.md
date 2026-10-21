@@ -9,17 +9,25 @@ Application services call storage, preview and export adapters; adapters never o
 The Electron document session is the current application service. CLI remains a deterministic
 in-memory Core demo; a shared external Application API is **Deferred**, not duplicated here.
 
-| Layer                          | Actual state / responsibility                                                | Boundary                                                                  |
-| ------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| Core                           | Implemented: schema, six commands, conflicts, immutable snapshots, undo/redo | No UI, filesystem, platform or model-provider dependency                  |
-| Main application session       | Implemented command adoption; P2A adds serialized file operations            | Asserts human origin, validates revision, owns live state and file grants |
-| Storage adapter                | P2A: validated JSON snapshot, bounded read, staged write/backup/replace      | Receives only main-authorized paths; no renderer file API                 |
-| Renderer                       | P1.5 pure inert model-to-HTML preview                                        | Escapes data; no document ownership or resource privilege                 |
-| HTML Bridge                    | Placeholder, retained for future compatibility policy                        | No universal lossless import claim; see ADR-0006                          |
-| Canvas / editor-ui / exporters | Mostly placeholders, retained without new runtime abstraction                | Implement only when a vertical slice needs behavior                       |
-| Agent                          | Typed bounded browser contract; external identity/permissions deferred       | Origin metadata is not authenticated identity or authorization            |
+| Layer                          | Actual state / responsibility                                                                  | Boundary                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Core                           | Schema 1.1, commands, conflicts, immutable snapshots, undo/redo                                | No UI, filesystem, platform or model-provider dependency                  |
+| Main application session       | Command adoption, resource collection, canonical source patches and serialized file operations | Asserts human origin, validates revision, owns live state and file grants |
+| Storage adapter                | Validated legacy JSON / bundle v2, bounded read, staged write/backup/replace                   | Receives only main-authorized paths; no renderer file API                 |
+| Renderer                       | Pure model-to-HTML preview with embedded asset references                                      | Escapes data; no document ownership or resource privilege                 |
+| HTML Bridge                    | Bounded native conversion, detached source scan/patch helpers                                  | No universal lossless import claim; see ADR-0006                          |
+| Canvas / editor-ui / exporters | Shell editing, source controls and shared offline HTML player adapters                         | No live DOM authority or specialized chart/Canvas editor                  |
+| Agent                          | Typed bounded browser contract; external identity/permissions deferred                         | Origin metadata is not authenticated identity or authorization            |
 
 ## Permission design (Proposed)
+
+The owner-authorized 2026-10-21 increment adds bundle/source adapters on top of these boundaries:
+Core 1.1 stores asset IDs, source revisions, media and dynamics; the main document session owns asset
+bytes, serialized file operations and source patches. HTML Bridge performs detached source scans and
+canonical patches. Exporters validate bundle v2 and emit the shared offline player. Source selection
+uses a separate inert native view; script-enabled playback uses its own unprivileged session.
+Neither guest can mutate Core or access file grants. The native/source distinction and compatibility
+limits are specified in [ADR-0006's dated extension](../decisions/ADR-0006-html-compatibility-boundary.md).
 
 | Capability  | Permitted effect                                                                     | Approval boundary                                                       |
 | ----------- | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |

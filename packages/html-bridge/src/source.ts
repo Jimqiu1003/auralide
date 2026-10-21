@@ -18,6 +18,12 @@ export function scanSourceHtml(source: string): SourceScan {
     throw new Error('不支持嵌套网页、插件、base 或 HTML Import。请提供独立 HTML。');
   const references: SourceReference[] = [];
   const nodes: { id: string; tag: string; text: string }[] = [];
+  const existingIds = [...doc.querySelectorAll('[data-auralide-node]')].map((node) =>
+    node.getAttribute('data-auralide-node')!,
+  );
+  let nextId =
+    existingIds.reduce((max, id) => Math.max(max, Number(id.replace('node-', '')) || 0), -1) + 1;
+  for (const node of doc.querySelectorAll('head style[data-auralide-player-policy]')) node.remove();
   const reference = (
     kind: SourceReference['kind'],
     url?: string,
@@ -47,8 +53,8 @@ export function scanSourceHtml(source: string): SourceScan {
       node.closest('body') &&
       !['SCRIPT', 'STYLE', 'LINK', 'META', 'NOSCRIPT'].includes(node.tagName)
     ) {
-      const id = node.getAttribute('data-auralide-node') ?? `node-${nodes.length}`;
-      if (!/^node-[0-9]+$/.test(id) || nodes.some((n) => n.id === id))
+      const id = node.getAttribute('data-auralide-node') ?? `node-${nextId++}`;
+      if (id.length > 64 || !/^node-[0-9]+$/.test(id) || nodes.some((n) => n.id === id))
         throw new Error('源码节点标识无效或重复。');
       node.setAttribute('data-auralide-node', id);
       nodes.push({

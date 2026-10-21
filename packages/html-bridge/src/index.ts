@@ -8,6 +8,7 @@ import type { Layer } from '@auralide/core';
  */
 export const layer: Layer = 'html-bridge';
 export { scanSourceHtml } from './source.js';
+export { patchSourceHtml, inspectSourceNode, installSourceSelection } from './source-edit.js';
 export type { SourceScan, SourceReference } from './source.js';
 
 export { HTML_IMPORT_SCRIPT } from './import.js';

@@ -5,6 +5,7 @@ import type { DocumentStatus } from '../shared/api.js';
 import { AuraWorkspace } from './aura-workspace.js';
 import { SlideArtwork } from './slide-artwork.js';
 import { BundleControls } from './bundle-controls.js';
+import { SourceEditor } from './source-editor.js';
 import type { Assets } from '@auralide/renderer';
 import { Icon } from './icons.js';
 import type { JSX, PointerEvent as ReactPointerEvent } from 'react';
@@ -90,12 +91,19 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
   const stageRef = useRef<HTMLDivElement>(null);
   const [fitWidth, setFitWidth] = useState(720);
   const [presenting, setPresenting] = useState(false);
+  const [sourceEditing, setSourceEditing] = useState(false);
+  const [sourceDraftPending, setSourceDraftPending] = useState(false);
+  const [sourceTarget, setSourceTarget] = useState<{ slideId: string; elementId: string } | null>(
+    null,
+  );
   const [presentationPage, setPresentationPage] = useState(0);
   const presentationRef = useRef<HTMLDialogElement>(null);
 
   const slide = document?.slides.find((item) => item.id === slideId) ?? document?.slides[0];
   const selected = slide?.elements.find((item) => item.id === elementId);
   const textElement = selected?.kind === 'text' ? selected : undefined;
+  const sourceSlide = document?.slides.find((item) => item.id === sourceTarget?.slideId);
+  const sourceElement = sourceSlide?.elements.find((item) => item.id === sourceTarget?.elementId);
   useEffect(() => {
     const fonts: FontFace[] = [];
     for (const [id, asset] of Object.entries(assets))
@@ -195,6 +203,15 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
     nextElement?: string,
   ): Promise<boolean> => {
     if (document === null || locked.current || window.auralide === undefined) return false;
+    if (
+      sourceDraftPending &&
+      ((operation === 'element.remove' && target.elementId === sourceTarget?.elementId) ||
+        (operation === 'slide.remove' && target.slideId === sourceTarget?.slideId))
+    ) {
+      setSourceEditing(true);
+      setMessage('请先应用或撤回 HTML 内部编辑输入。');
+      return false;
+    }
     pendingFocus.current = globalThis.document.activeElement as HTMLElement | null;
     locked.current = true;
     setBusy(true);
@@ -251,6 +268,11 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
   };
   const history = async (direction: 'undo' | 'redo'): Promise<void> => {
     if (!document || locked.current || !window.auralide || drag.current) return;
+    if (sourceDraftPending) {
+      setSourceEditing(true);
+      setMessage('请先应用或撤回 HTML 内部编辑输入，再修改历史。');
+      return;
+    }
     if (drafts.current.size) {
       setMessage('请先应用或撤回文本输入，再撤销文档修改。');
       return;
@@ -279,6 +301,11 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
   };
   const startPresentation = async (fromFirst: boolean): Promise<void> => {
     if (!document?.slides.length || busy) return;
+    if (sourceDraftPending) {
+      setSourceEditing(true);
+      setMessage('请先应用或撤回 HTML 内部编辑输入，再演示。');
+      return;
+    }
     if (drafts.current.size) {
       setMessage('请先应用或撤回文本输入，再开始演示。');
       return;
@@ -411,6 +438,11 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
   };
 
   const fileAction = async (operation: FileOperation, confirmed = false): Promise<void> => {
+    if (sourceDraftPending) {
+      setSourceEditing(true);
+      setMessage('请先应用或撤回 HTML 内部编辑输入，再进行文件操作。');
+      return;
+    }
     const bridge = window.auralide;
     if (document === null || locked.current || bridge === undefined) return;
     const replacesDocument = [
@@ -616,7 +648,13 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
       if (drafts.current.size) event.preventDefault();
     };
     const keys = (event: KeyboardEvent): void => {
-      if (modal || busy || presenting || globalThis.document.activeElement?.tagName === 'IFRAME')
+      if (
+        modal ||
+        busy ||
+        presenting ||
+        sourceEditing ||
+        globalThis.document.activeElement?.tagName === 'IFRAME'
+      )
         return;
       if ((event.ctrlKey || event.metaKey) && ['s', 'o', 'n'].includes(event.key.toLowerCase())) {
         event.preventDefault();
@@ -741,7 +779,7 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
         >
           {busy
             ? '正在处理…'
-            : drafts.current.size
+            : drafts.current.size || sourceDraftPending
               ? '有未应用输入'
               : fileStatus?.dirty
                 ? '有未保存修改'
@@ -1355,10 +1393,18 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
                 )}
                 {document && slide && (
                   <BundleControls
+                    onPlay={() => startPresentation(false)}
                     document={document}
                     slide={slide}
                     selected={selected}
                     busy={busy}
+                    onEditSource={() => {
+                      if (selected?.kind !== 'source') return;
+                      invoker.current = globalThis.document.activeElement as HTMLElement | null;
+                      if (!sourceDraftPending)
+                        setSourceTarget({ slideId: slide.id, elementId: selected.id });
+                      setSourceEditing(true);
+                    }}
                     onMessage={setMessage}
                     updateProperties={updateProperties}
                     updateSlide={async (transition) => {
@@ -1416,6 +1462,25 @@ export function DocumentPreview({ diagnostics = false }: { diagnostics?: boolean
           {document?.revision ?? '—'}
         </output>
       </footer>
+      {document && sourceSlide && sourceElement?.kind === 'source' && (
+        <SourceEditor
+          key={sourceElement.id}
+          open={sourceEditing}
+          document={document}
+          slide={sourceSlide}
+          element={sourceElement}
+          onDraftsChange={setSourceDraftPending}
+          onClose={() => {
+            setSourceEditing(false);
+            requestAnimationFrame(() => invoker.current?.focus());
+          }}
+          onChanged={async (value) => {
+            adopt(value);
+            setAssets(await window.auralide!.getDocumentAssets());
+            setFileStatus(await window.auralide!.getDocumentStatus());
+          }}
+        />
+      )}
       <dialog
         className="presentation-dialog"
         ref={presentationRef}

@@ -74,6 +74,9 @@ jobs:
       - name: Offline bundle, dynamic source isolation and real restart
         run: node apps/desktop/test/bundle.electron.mjs
 
+      - name: Inert source visual edits, native pointer and editable round trip
+        run: node apps/desktop/test/source-editing.electron.mjs
+
       - name: Package self-contained Windows portable preview
         if: matrix.target == 'windows-x64'
         run: node apps/desktop/scripts/package-portable.mjs

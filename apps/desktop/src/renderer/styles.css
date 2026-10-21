@@ -1046,3 +1046,99 @@ body:has(.shell) {
   width: 100%;
   min-width: 0;
 }
+
+.source-editor-dialog {
+  width: min(1220px, 96vw);
+  max-width: 96vw;
+  height: min(780px, 94vh);
+  max-height: 94vh;
+  padding: 20px;
+  color: var(--text);
+  background: var(--surface);
+}
+.source-editor-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+.source-editor-heading h2 {
+  margin: 0 0 12px;
+}
+.source-editor-dialog nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.source-editor-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  height: calc(100% - 160px);
+  min-height: 260px;
+}
+.source-editor-preview {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  overflow: hidden;
+  background: var(--canvas);
+}
+.source-editor-surface {
+  width: 100%;
+  max-height: 100%;
+}
+.source-editor-properties {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  border: 0;
+  padding: 0 6px;
+  margin: 0;
+  min-width: 0;
+  overflow-y: auto;
+}
+.source-editor-properties label,
+.source-code-panel label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.source-editor-properties input,
+.source-editor-properties select,
+.source-editor-properties textarea {
+  width: 100%;
+  min-width: 0;
+}
+.source-editor-properties input,
+.source-editor-properties select,
+.source-editor-properties textarea,
+.source-code-panel textarea {
+  background: var(--surface-soft);
+  color: var(--text);
+  border: 1px solid var(--control-line);
+  border-radius: 5px;
+  padding: 7px;
+}
+.source-property-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.source-code-panel {
+  height: calc(100% - 160px);
+}
+.source-code-panel label {
+  height: calc(100% - 70px);
+}
+.source-code-panel textarea {
+  height: 100%;
+  resize: none;
+  font-family: Consolas, monospace;
+  tab-size: 2;
+}
+.source-editor-status {
+  display: block;
+  padding-top: 12px;
+  color: var(--muted);
+}
