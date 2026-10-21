@@ -306,10 +306,10 @@ try {
         .getAllWebContents()
         .find((c) => c.getURL().startsWith('data:text/html'))
         .executeJavaScript(
-          '(()=>{const css=getComputedStyle(document.getElementById("heading"));return [css.color,css.backgroundColor,css.borderWidth,css.borderStyle,css.opacity,css.width,css.height]})()',
+          '(()=>{const node=document.getElementById("heading"),css=getComputedStyle(node);return [css.color,css.backgroundColor,node.style.borderWidth,css.borderStyle,css.opacity,css.width,node.style.height,Math.abs(parseFloat(css.borderWidth)-2)<=1/devicePixelRatio,Math.abs(parseFloat(css.height)-90)<=1/devicePixelRatio]})()',
         ),
     ),
-    ['rgb(18, 52, 86)', 'rgb(238, 238, 238)', '2px', 'solid', '0.7', '640px', '90px'],
+    ['rgb(18, 52, 86)', 'rgb(238, 238, 238)', '2px', 'solid', '0.7', '640px', '90px', true, true],
   );
   await picker.selectOption(headingId);
   await page.getByLabel('节点文字', { exact: true }).fill('Unapplied node draft');
