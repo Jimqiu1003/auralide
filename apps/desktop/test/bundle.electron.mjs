@@ -186,7 +186,24 @@ try {
     'embedded image actually decodes',
     await frame.locator('img').evaluate((e) => e.complete && e.naturalWidth > 0),
   );
-  await frame.getByRole('button', { name: '源页面交互' }).click();
+  // OOPIF locator offsets drift under fitted transforms; derive real pointer input from both viewports.
+  const sourceButton = await frame
+    .getByRole('button', { name: '源页面交互' })
+    .evaluate((button) => {
+      const rect = button.getBoundingClientRect();
+      return {
+        x: rect.x + rect.width / 2,
+        y: rect.y + rect.height / 2,
+        width: window.innerWidth,
+        height: window.innerHeight,
+      };
+    });
+  const sourceFrame = await player.locator('iframe').boundingBox();
+  assert.ok(sourceFrame);
+  await player.mouse.click(
+    sourceFrame.x + (sourceButton.x * sourceFrame.width) / sourceButton.width,
+    sourceFrame.y + (sourceButton.y * sourceFrame.height) / sourceButton.height,
+  );
   check(
     'inline source interaction is preserved',
     await frame.locator('#state').innerText(),
