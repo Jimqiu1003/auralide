@@ -39,6 +39,21 @@ export const HTML_IMPORT_SCRIPT = String.raw`(async () => {
     if (!parts || parts.length < 3 || (parts.length > 3 && Number(parts[3]) === 0)) return undefined;
     return '#' + parts.slice(0,3).map(part => Math.round(Number(part)).toString(16).padStart(2,'0')).join('');
   };
+  // The inspection window is hidden, and a hidden window throttles requestAnimationFrame to roughly
+  // one frame per second: waiting for two frames per slide cost about two seconds per slide, which
+  // pushed decks larger than a few slides past the import timeout and surfaced as an empty editor.
+  // Reading a layout property forces style and layout to be up to date synchronously, which is all
+  // this wait ever achieved; the frame wait is kept only as an opportunistic yield, capped by a
+  // timer so it can never stall the import.
+  const settlePage = () => {
+    void document.body.offsetHeight;
+    return new Promise(resolve => {
+      let settled = false, timer;
+      const finish = () => { if (!settled) { settled = true; clearTimeout(timer); resolve(); } };
+      timer = setTimeout(finish, 50);
+      requestAnimationFrame(() => requestAnimationFrame(finish));
+    });
+  };
   const slides = [], mappings = [];
   let size;
   for (const [index, page] of pages.entries()) {
@@ -51,7 +66,7 @@ export const HTML_IMPORT_SCRIPT = String.raw`(async () => {
     }
     page.style.setProperty('position','relative','important');
     page.style.setProperty('left','0','important');page.style.setProperty('top','0','important');
-    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await settlePage();
     const rect = page.getBoundingClientRect(), pageStyle = getComputedStyle(page);
     if (!size) size = {width:Math.max(1,Math.round(rect.width || 1280)),height:Math.max(1,Math.round(rect.height || 720))};
     if (Math.abs(rect.width-size.width)>2 || Math.abs(rect.height-size.height)>2) warnings.add('各页尺寸不一致，已按第一页画布尺寸换算。');
