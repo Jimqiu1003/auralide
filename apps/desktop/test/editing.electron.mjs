@@ -77,6 +77,19 @@ try {
       'bundled runtime dependency notices retained',
       licenses.includes('react@') && licenses.includes('zod@'),
     );
+    // A Chromium sandbox abort happens before any application code runs, so the app cannot report
+    // it; the package must therefore ship the diagnostic launcher that turns the exit code into an
+    // explanation (issue #32).
+    const launcherPath = join(manifest.directory, '启动诊断.cmd');
+    const launcher = await readFile(launcherPath, 'utf8');
+    check(
+      'package ships the startup diagnostic launcher',
+      launcher.includes('AURALIDE_EXIT') && launcher.includes('-2147483645'),
+    );
+    check(
+      'launcher explains the sandbox abort instead of failing silently',
+      launcher.includes('STATUS_BREAKPOINT') && launcher.includes('pause'),
+    );
   }
   await page.getByTestId('document-text-input').fill('Portable editing round trip');
   await page.getByTestId('document-apply').click();
