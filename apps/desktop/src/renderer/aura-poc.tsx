@@ -111,6 +111,8 @@ export function AuraPoc(): JSX.Element {
 
   const renderPreview = async (): Promise<void> => {
     try {
+      // Native WebContentsView must remain fully visible inside the editor viewport.
+      surface.current?.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
       const document = await window.auralide?.getDocument();
       const slide = document?.slides[0];
       if (document === undefined || slide === undefined) {

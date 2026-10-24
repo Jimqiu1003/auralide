@@ -1,0 +1,47 @@
+version: '0.2'
+status: implementation_candidate
+plan: next-stage-plan.md
+owner: Lead Engineer
+approver: Jim
+requirements:
+  - id: REQ-STAB-001
+    milestone: M0
+    tasks: [T01, T02, T03, T04]
+    acceptance: AC-001
+    verdict: PASS
+    evidence: 'M0-stabilization.md; merged PRs 20, 21, 23; native CI'
+  - id: REQ-STAB-002
+    milestone: M1
+    tasks: [T05, T06, T07]
+    acceptance: AC-002
+    verdict: NOT_TESTED
+  - id: REQ-STAB-003
+    milestone: M2
+    tasks: [T08, T09, T11]
+    acceptance: AC-003
+    verdict: NOT_TESTED
+  - id: REQ-STAB-004
+    milestone: M2
+    tasks: [T10, T11]
+    acceptance: AC-004
+    verdict: NOT_TESTED
+  - id: REQ-STAB-005
+    milestone: M3
+    tasks: [T12, T13]
+    acceptance: AC-005
+    verdict: NOT_TESTED
+  - id: REQ-STAB-006
+    milestone: M3
+    tasks: [T13]
+    acceptance: AC-006
+    verdict: NOT_TESTED
+  - id: REQ-STAB-007
+    milestone: M4
+    tasks: [T14, T15]
+    acceptance: AC-007
+    verdict: NOT_TESTED
+  - id: REQ-STAB-008
+    milestone: M4
+    tasks: [T16, T17]
+    acceptance: AC-008
+    verdict: NOT_TESTED

@@ -3,6 +3,7 @@ import { Buffer } from 'node:buffer';
 import { mkdir, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 import { _electron } from 'playwright-core';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -25,7 +26,11 @@ const check = (name, actual, expected) => {
   checks.push(name);
 };
 const launch = async () => {
-  app = await _electron.launch({ args: ['.'], cwd: root, env });
+  app = await _electron.launch({
+    args: ['.', '--user-data-dir=' + join(directory, 'profile')],
+    cwd: root,
+    env,
+  });
   const page = await app.firstWindow();
   await page.getByTestId('document-text-input').waitFor();
   await page.waitForFunction(
@@ -44,9 +49,7 @@ const edit = async (page, text) => {
   await page.getByTestId('document-text-input').fill(text);
   await page.getByTestId('document-apply').click();
   await page.waitForFunction(
-    () =>
-      document.querySelector('[data-testid="document-status"]')?.textContent ===
-      'Text updated through Core.',
+    () => document.querySelector('[data-testid="document-status"]')?.textContent === '文本已更新',
   );
 };
 const closeSavedWindow = async (page) => {
@@ -64,7 +67,7 @@ try {
   await edit(page, 'P2A saved once');
   await page.getByTestId('document-save').click();
   await page.waitForFunction(() =>
-    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('Saved '),
+    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('已保存 · '),
   );
   check(
     'first save persists Core edit',
@@ -77,7 +80,7 @@ try {
   await page.waitForFunction(() =>
     document
       .querySelector('[data-testid="document-status"]')
-      ?.textContent?.includes('recovery backup'),
+      ?.textContent?.includes('已保留恢复备份'),
   );
   const backup = (await readdir(directory)).find((name) => name.endsWith('.bak'));
   check(
@@ -111,7 +114,7 @@ try {
   await edit(page, 'Unsaved value');
   await page.getByTestId('document-open').click();
   await page.waitForFunction(() =>
-    document.querySelector('[data-testid="document-status"]')?.textContent?.includes('cancelled'),
+    document.querySelector('[data-testid="document-status"]')?.textContent?.includes('已取消'),
   );
   check(
     'declining discard retains current content',
@@ -123,7 +126,7 @@ try {
   });
   await page.getByTestId('document-open').click();
   await page.waitForFunction(() =>
-    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('Opened '),
+    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('已打开 · '),
   );
   check(
     'reopen fences previous revision',
@@ -146,7 +149,7 @@ try {
   );
   await page.getByTestId('document-open').click();
   await page.waitForFunction(() =>
-    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('Opened '),
+    document.querySelector('[data-testid="document-status"]')?.textContent?.startsWith('已打开 · '),
   );
   check(
     'reopen after restart restores text',
@@ -158,11 +161,15 @@ try {
     Number(await page.getByTestId('document-revision').textContent()),
     3,
   );
-  await page.getByTestId('aura-render').click();
-  await page.waitForFunction(() =>
-    document.querySelector('[data-testid="aura-result"]')?.textContent?.includes('"slide-preview"'),
+  await page.locator('[data-workspace="aura"]').click();
+  await page.waitForFunction(async () => {
+    const result = await window.auralide.auraInvoke({ tool: 'browser.listTabs', input: {} });
+    return result.ok && result.value.some((item) => item.mode === 'slide-preview');
+  });
+  const tabs = await page.evaluate(() =>
+    window.auralide.auraInvoke({ tool: 'browser.listTabs', input: {} }),
   );
-  const tab = JSON.parse(await page.getByTestId('aura-result').textContent()).value;
+  const tab = tabs.value.find((item) => item.mode === 'slide-preview');
   const inspected = await page.evaluate(
     (tab) =>
       window.auralide.auraInvoke({
@@ -176,7 +183,6 @@ try {
     inspected.value?.text,
     'P2A survives application restart',
   );
-  await page.evaluate(() => window.scrollTo(0, 0));
   await page.waitForFunction(async (tab) => {
     const result = await window.auralide.auraInvoke({
       tool: 'preview.getDiagnostics',
@@ -184,15 +190,25 @@ try {
     });
     return result.ok && result.value.visible;
   }, tab);
-  const capture = await page.evaluate(
-    (tab) =>
-      window.auralide.auraInvoke({
-        tool: 'preview.screenshot',
-        input: { tabId: tab.id, expectedRevision: tab.revision },
-      }),
-    tab,
+  let capture;
+  // Wait for the native compositor, retaining the actual refusal if it never settles.
+  for (let attempt = 0; attempt < 50; attempt++) {
+    capture = await page.evaluate(
+      (tab) =>
+        window.auralide.auraInvoke({
+          tool: 'preview.screenshot',
+          input: { tabId: tab.id, expectedRevision: tab.revision },
+        }),
+      tab,
+    );
+    if (capture.ok) break;
+    await delay(100);
+  }
+  check(
+    'reopened HTML guest screenshot succeeds: ' + JSON.stringify(capture.error ?? {}),
+    capture.ok,
+    true,
   );
-  check('reopened HTML guest screenshot succeeds', capture.ok, true);
   const png = Buffer.from(capture.value.base64, 'base64');
   check('reopened HTML screenshot is PNG', png.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
   await writeFile(join(artifacts, 'p2a-html-preview.png'), png);
@@ -212,6 +228,7 @@ try {
     await page.evaluate(() => window.auralide.getDocument()),
     before,
   );
+  await page.locator('[data-workspace="editor"]').click();
   await edit(page, 'Keep this unsaved edit');
   await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].close());
   check('cancel close retains window', page.isClosed(), false);

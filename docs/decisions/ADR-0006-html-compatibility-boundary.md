@@ -2,13 +2,13 @@
 
 - Status: **Proposed — owner review required**
 - Date: 2026-10-15
-- Extends ADR-0001/0002/0004; no general HTML parser implemented
+- Extends ADR-0001/0002/0004; bounded file conversion separately authorized by the owner on 2026-10-17
 
 ## Current state and proposal
 
 Native structured Presentation remains the only editable authority. Its escaped HTML/CSS/SVG output
-is derived and can be regenerated; it is not independently writable document state. Aura POC only
-loads that output and a reviewed inert fixture. Arbitrary imported or remote content is unsupported.
+is derived and can be regenerated; it is not independently writable document state. Aura loads that derived output and reviewed inert fixtures. Imported sources are inspected in a
+separate, disposable guest; arbitrary remote pages remain unsupported.
 
 Future imports retain original source bytes/assets as immutable provenance, with hashes and a
 conversion report. Only explicitly supported text/shape/image mappings become native objects via
@@ -33,3 +33,28 @@ Validation before implementation: QA fixtures with unsupported layouts/scripts, 
 preservation, deterministic conversion reports, explicit loss acceptance, escaped native rendering,
 and negative tests proving imported guests cannot call privileged IPC. Pixel similarity alone does
 not prove semantic/native editability.
+
+## Authorized bounded implementation — 2026-10-17
+
+The owner explicitly requested HTML import/export and Save As, prioritizing single-file multi-slide
+presentations. This authorizes the following slice without accepting every future proposal above:
+
+- UTF-8 local HTML (20 MiB maximum) is inspected in a hidden sandboxed BrowserWindow with no preload,
+  Node, scripts, external resources, downloads or granted permissions. Only fixed main-owned DOM
+  inspection executes. Conversion is bounded to 50,000 nodes, 100 pages and 10,000 native objects.
+- Static `.slide`, `data-slide`, `data-slide-id`, Reveal-style sections and direct body sections are
+  recognized. Embedded CSS determines measured text/basic shapes. Typography, stacking, transparency,
+  complex transforms and unsupported media are explicitly lossy; no arbitrary pixel-fidelity claim.
+- A native confirmation lists conversion warnings before replacing anything. The selected source is
+  untouched; exact UTF-8 bytes, SHA-256 and source-to-element mappings are retained under userData's
+  `html-imports`. Converted objects are staged with Core commands, then adopted atomically as an
+  unsaved, unbound document. A rejection, cancellation or cache failure preserves the active document.
+- Derived offline HTML includes escaped, schema-validated native metadata. Reopening Auralide-produced
+  HTML hydrates that metadata under the same boundary as JSON; unknown metadata is refused. Its
+  generated standalone player may execute only in the exported file, never in imported guests/Aura.
+- Save As selects a new native file grant and binds only after successful atomic write. Saving a bound
+  HTML file regenerates from Core and keeps the existing fingerprint/backup protections. Export is a
+  separate derived snapshot; it does not clear dirty state or change the active file binding.
+
+Original HTML is immutable provenance, not a second editable authority. The general restricted-source
+component model and a third-party plugin API remain Proposed and unimplemented.

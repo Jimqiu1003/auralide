@@ -79,6 +79,8 @@ export {
   commandTargetSchema,
   elementAddPayloadSchema,
   elementMovePayloadSchema,
+  elementUpdatePropertiesPayloadSchema,
+  elementReorderPayloadSchema,
   elementTargetSchema,
   elementUpdateTextPayloadSchema,
   emptyPayloadSchema,

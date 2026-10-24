@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, session, shell } from 'electron';
 import type { IpcMainInvokeEvent, WebContents } from 'electron';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { z } from 'zod';
@@ -10,13 +11,19 @@ import { describeIssues, pingRequestSchema } from '../shared/schemas.js';
 import {
   dispatchDocumentCommand,
   endDocumentSession,
+  editDocumentHistory,
   getDocument,
+  getDocumentStatus,
   hasUnsavedChanges,
   isDocumentFileOperationPending,
   openDocumentFile,
   saveDocumentFile,
+  newDocumentFile,
+  exportHtmlFile,
 } from './document-session.js';
+import { inspectHtmlFile, retainHtmlSource } from './html-import.js';
 import { applicationMenuTemplate } from './platform.js';
+import { portableUserDataPath, startupRefusalMessage } from './startup.js';
 import { BrowserController } from '../aura/browser-controller.js';
 import { isTrustedRendererUrl, validateDevServerUrl } from './security.js';
 
@@ -31,6 +38,22 @@ import { isTrustedRendererUrl, validateDevServerUrl } from './security.js';
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const preloadPath = join(currentDirectory, 'preload.cjs');
 const rendererEntry = join(currentDirectory, '..', 'renderer', 'index.html');
+
+/**
+ * Portable builds carry their own state next to the executable (issue #32).
+ *
+ * Electron keeps the single-instance lock inside the user-data directory. When `%APPDATA%\Auralide`
+ * holds leftover or locked state from an earlier run, `requestSingleInstanceLock()` returns false and
+ * the app quits before showing anything — indistinguishable from "the EXE does nothing". Pointing a
+ * portable copy at its own `user-data` directory removes that whole class of failure and matches what
+ * "portable" should mean anyway.
+ *
+ * An explicit `--user-data-dir` on the command line still wins: Electron resolves it before this
+ * module runs, and the switch check below keeps us from overriding it.
+ */
+if (app.isPackaged && !app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', portableUserDataPath(app.getPath('exe')));
+}
 
 /** Set by `scripts/launch.mjs --dev`; its presence is what selects the development load path. */
 const devServerUrl = validateDevServerUrl(
@@ -153,6 +176,10 @@ const createWindow = (): BrowserWindow => {
   const window = new BrowserWindow({
     width: 1280,
     height: 800,
+    minWidth: 1080,
+    minHeight: 700,
+    // CI's macOS work area is smaller than the required visual-review sizes.
+    enableLargerThanScreen: !app.isPackaged && app.commandLine.hasSwitch('auralide-visual-test'),
     show: false,
     backgroundColor: '#101014',
     webPreferences: {
@@ -168,6 +195,17 @@ const createWindow = (): BrowserWindow => {
   });
 
   guardContents(window.webContents);
+  window.webContents.on('will-prevent-unload', (event) => {
+    const answer = dialog.showMessageBoxSync(window, {
+      type: 'warning',
+      message: '仍有未应用的文本输入。放弃输入并关闭？',
+      buttons: ['取消', '放弃输入并关闭'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true,
+    });
+    if (answer === 1) event.preventDefault();
+  });
   aura = new BrowserController(window, getDocument);
   window.on('close', (event) => {
     if (isDocumentFileOperationPending()) {
@@ -210,98 +248,190 @@ const createWindow = (): BrowserWindow => {
   return window;
 };
 
-if (!app.requestSingleInstanceLock()) {
-  app.quit();
-} else {
-  app.on('second-instance', () => {
-    if (mainWindow !== null) {
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
+/**
+ * Starts the application only once per user-data directory.
+ *
+ * A refusal here used to be a silent `app.quit()`: exit code 0, no window, no dialog, nothing a user
+ * could act on (issue #32). It now reports the reason on stderr, writes it into the user-data
+ * directory for support, and shows the user what happened instead of vanishing.
+ */
+const startApplication = (): void => {
+  if (app.requestSingleInstanceLock()) {
+    app.on('second-instance', () => {
+      if (mainWindow !== null) {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
       }
-      mainWindow.focus();
-    }
-  });
-
-  app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-      app.quit();
-    }
-  });
-
-  void app.whenReady().then(() => {
-    Menu.setApplicationMenu(Menu.buildFromTemplate(applicationMenuTemplate(process.platform)));
-    // No capability is granted by default, including to the application's own page.
-    session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => {
-      callback(false);
     });
-    session.defaultSession.setPermissionCheckHandler(() => false);
 
-    handle(IPC.runtimeInfo, z.tuple([]), () => runtimeInfo());
-    handle(IPC.ping, z.tuple([z.unknown()]), ([payload]) => handlePing(payload));
-    handle(IPC.getDocument, z.tuple([]), () => getDocument());
-    handle(IPC.saveDocument, z.tuple([z.unknown()]), ([request]) =>
-      saveDocumentFile(request, async () => {
+    app.on('window-all-closed', () => {
+      if (process.platform !== 'darwin') {
+        app.quit();
+      }
+    });
+
+    void app.whenReady().then(() => {
+      Menu.setApplicationMenu(Menu.buildFromTemplate(applicationMenuTemplate(process.platform)));
+      // No capability is granted by default, including to the application's own page.
+      session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) => {
+        callback(false);
+      });
+      session.defaultSession.setPermissionCheckHandler(() => false);
+
+      handle(IPC.runtimeInfo, z.tuple([]), () => runtimeInfo());
+      handle(IPC.ping, z.tuple([z.unknown()]), ([payload]) => handlePing(payload));
+      handle(IPC.getDocument, z.tuple([]), () => getDocument());
+      handle(IPC.getDocumentStatus, z.tuple([]), () => getDocumentStatus());
+      handle(IPC.editHistory, z.tuple([z.unknown()]), ([request]) => editDocumentHistory(request));
+      const chooseSave = async (htmlOnly = false): Promise<string | null> => {
         if (mainWindow === null) return null;
         const result = await dialog.showSaveDialog(mainWindow, {
-          title: 'Save Auralide document',
-          defaultPath: 'presentation.auralide.json',
-          filters: [{ name: 'Auralide document', extensions: ['json'] }],
+          title: htmlOnly ? '导出 HTML 演示文稿' : '保存演示文稿',
+          defaultPath: htmlOnly ? 'presentation.html' : 'presentation.auralide.json',
+          filters: htmlOnly
+            ? [{ name: 'HTML 演示文稿', extensions: ['html', 'htm'] }]
+            : [
+                { name: 'Auralide 文档', extensions: ['json'] },
+                { name: 'HTML 演示文稿', extensions: ['html', 'htm'] },
+              ],
           properties: ['showOverwriteConfirmation'],
         });
         return result.canceled ? null : (result.filePath ?? null);
-      }),
-    );
-    handle(IPC.openDocument, z.tuple([z.unknown()]), ([request]) =>
-      openDocumentFile(
-        request,
-        async () => {
-          if (mainWindow === null) return null;
-          const result = await dialog.showOpenDialog(mainWindow, {
-            title: 'Open Auralide document',
-            filters: [{ name: 'Auralide document', extensions: ['json'] }],
-            properties: ['openFile'],
-          });
-          return result.canceled ? null : (result.filePaths[0] ?? null);
-        },
-        async () => {
-          if (mainWindow === null) return false;
-          const result = await dialog.showMessageBox(mainWindow, {
-            type: 'warning',
-            message: 'Discard unsaved changes and open this document?',
-            buttons: ['Cancel', 'Discard and open'],
-            defaultId: 0,
-            cancelId: 0,
-            noLink: true,
-          });
-          return result.response === 1;
-        },
-      ),
-    );
-    handle(IPC.applyCommand, z.tuple([z.unknown()]), ([command]) =>
-      dispatchDocumentCommand(command),
-    );
-    handle(
-      IPC.auraInvoke,
-      z.tuple([z.unknown()]),
-      ([request]) =>
-        aura?.invoke(request) ?? {
-          ok: false,
-          error: { code: 'runtime-error', message: 'Aura runtime unavailable.' },
-        },
-    );
-    handle(IPC.auraBounds, z.tuple([z.unknown()]), ([bounds]) => aura?.setBounds(bounds) ?? false);
+      };
+      const confirmDiscard = async (): Promise<boolean> => {
+        if (mainWindow === null) return false;
+        const result = await dialog.showMessageBox(mainWindow, {
+          type: 'warning',
+          message: '当前文档有未保存的修改，是否放弃并继续？',
+          buttons: ['取消', '放弃修改并继续'],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+        });
+        return result.response === 1;
+      };
+      for (const [channel, saveAs] of [
+        [IPC.saveDocument, false],
+        [IPC.saveDocumentAs, true],
+      ] as const)
+        handle(channel, z.tuple([z.unknown()]), ([request]) =>
+          saveDocumentFile(request, () => chooseSave(), saveAs),
+        );
+      handle(IPC.newDocument, z.tuple([z.unknown()]), ([request]) =>
+        newDocumentFile(request, confirmDiscard),
+      );
+      handle(IPC.exportHtml, z.tuple([z.unknown()]), ([request]) =>
+        exportHtmlFile(request, () => chooseSave(true)),
+      );
+      for (const [channel, htmlOnly] of [
+        [IPC.openDocument, false],
+        [IPC.importHtml, true],
+      ] as const)
+        handle(channel, z.tuple([z.unknown()]), ([request]) =>
+          openDocumentFile(
+            request,
+            async () => {
+              if (mainWindow === null) return null;
+              const result = await dialog.showOpenDialog(mainWindow, {
+                title: htmlOnly ? '导入 HTML 演示文稿' : '打开演示文稿',
+                filters: htmlOnly
+                  ? [{ name: 'HTML 演示文稿', extensions: ['html', 'htm'] }]
+                  : [
+                      { name: '演示文稿（Auralide / HTML）', extensions: ['json', 'html', 'htm'] },
+                      { name: 'Auralide 文档', extensions: ['json'] },
+                      { name: 'HTML 演示文稿', extensions: ['html', 'htm'] },
+                    ],
+                properties: ['openFile'],
+              });
+              return result.canceled ? null : (result.filePaths[0] ?? null);
+            },
+            confirmDiscard,
+            {
+              inspect: inspectHtmlFile,
+              retain: retainHtmlSource,
+              confirm: async (report) => {
+                if (mainWindow === null) return false;
+                const result = await dialog.showMessageBox(mainWindow, {
+                  type: 'warning',
+                  message: `将 HTML 转换为 ${report.slideCount} 页、${report.elementCount} 个可编辑对象`,
+                  detail: report.warnings.join('\n') + '\n原文件将保留；转换结果需要另行保存。',
+                  buttons: ['取消', '接受转换并导入'],
+                  defaultId: 0,
+                  cancelId: 0,
+                  noLink: true,
+                });
+                return result.response === 1;
+              },
+            },
+          ),
+        );
+      handle(IPC.applyCommand, z.tuple([z.unknown()]), ([command]) =>
+        dispatchDocumentCommand(command),
+      );
+      handle(
+        IPC.auraInvoke,
+        z.tuple([z.unknown()]),
+        ([request]) =>
+          aura?.invoke(request) ?? {
+            ok: false,
+            error: { code: 'runtime-error', message: 'Aura runtime unavailable.' },
+          },
+      );
+      handle(
+        IPC.auraBounds,
+        z.tuple([z.unknown()]),
+        ([bounds]) => aura?.setBounds(bounds) ?? false,
+      );
 
-    // One line of machine-readable startup evidence, also asserting which path was taken.
-    process.stdout.write(
-      `[auralide] startup loadPath=${loadPath} electron=${process.versions.electron} chrome=${process.versions.chrome} node=${process.versions.node} preload=${preloadPath} renderer=${loadPath === 'development' ? devServerUrl : rendererEntry}\n`,
-    );
+      // One line of machine-readable startup evidence, also asserting which path was taken.
+      process.stdout.write(
+        `[auralide] startup loadPath=${loadPath} electron=${process.versions.electron} chrome=${process.versions.chrome} node=${process.versions.node} preload=${preloadPath} renderer=${loadPath === 'development' ? devServerUrl : rendererEntry}\n`,
+      );
 
-    mainWindow = createWindow();
+      mainWindow = createWindow();
 
-    app.on('activate', () => {
-      if (mainWindow === null && BrowserWindow.getAllWindows().length === 0) {
-        mainWindow = createWindow();
-      }
+      app.on('activate', () => {
+        if (mainWindow === null && BrowserWindow.getAllWindows().length === 0) {
+          mainWindow = createWindow();
+        }
+      });
     });
-  });
-}
+    return;
+  }
+
+  reportStartupRefusal();
+};
+
+/**
+ * Explains why the window never appeared, instead of exiting silently (issue #32).
+ *
+ * `requestSingleInstanceLock()` also fails when the lock cannot be *created* — a stale profile, a
+ * permission problem, or a locked file — not only when a second copy is genuinely running. Those two
+ * cases are indistinguishable from inside this process, so the message stays accurate for both and
+ * gives the user something to act on. A real second launch sees this briefly and exits; a broken
+ * profile sees it and knows the app is not simply broken.
+ */
+const reportStartupRefusal = (): void => {
+  const message = startupRefusalMessage(app.getPath('userData'));
+
+  process.stderr.write(
+    `[auralide] startup refused: single-instance lock unavailable (${app.getPath('userData')})\n`,
+  );
+  try {
+    mkdirSync(app.getPath('userData'), { recursive: true });
+    writeFileSync(
+      join(app.getPath('userData'), 'startup-refused.log'),
+      `${new Date().toISOString()}\n${message}\n`,
+    );
+  } catch {
+    // Logging is best effort: a failure to write must not prevent the dialog below.
+  }
+
+  // `dialog.showErrorBox` works before `ready`, which is the only reason this can still be shown.
+  dialog.showErrorBox('Auralide 无法启动', message);
+  app.exit(1);
+};
+
+startApplication();

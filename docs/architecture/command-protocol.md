@@ -1,6 +1,6 @@
 # Command Protocol
 
-Status: **P1 implemented contract**. Normative architecture: [ADR-0002](../decisions/ADR-0002-p1-runtime-and-core.md).
+Status: **P1 baseline with additive M2 editing operations**. Normative architecture: [ADR-0002](../decisions/ADR-0002-p1-runtime-and-core.md).
 The selected implementation is the `feat/p1-core-document-commands` lineage; the incompatible
 `feat/p1-core-commands` prototype is preserved in its historical branch. Exact types are the Zod
 schemas and public exports in `packages/core`. Evidence: [Codex report](../reports/P1-codex-takeover-report.md).
@@ -134,6 +134,25 @@ New operations need an Issue, schema, target/payload/invariant/error specificati
 and failure-atomicity tests. Accepted architecture changes need an ADR update. Do not create
 transport-local mutation paths or accept executable markup through text fields.
 
-Deferred: persistence/migration, IPC undo, full CLI framing, MCP, idempotency keys, agent
+Deferred: format migration, full CLI framing, MCP, idempotency keys, agent
 authorization, binary assets, snapshot memory limits and deltas. Attribution records an action;
 it does not authorize capability. Authorization remains above Core.
+
+## M2 additive editing contract (2026-10-18, execution of next-stage plan)
+
+`element.updateProperties` accepts an element target and a strict nonempty payload with optional
+complete `geometry`, partial text `style`, or shape `fill`/`stroke`. Text style is rejected for
+non-text objects; shape colors are rejected for other objects. Reuse existing geometry/style limits;
+new color edits accept bounded literal colors, never CSS resource expressions. The resulting full
+document is still schema-validated before adoption. Content/IDs and the JSON 1.0 format are unchanged.
+
+`element.reorder` accepts `{ index }` within the target slide's existing array. Array order is the
+paint order in canvas, thumbnails, HTML preview and export; legacy `zIndex` data is retained in JSON
+but does not override array ordering. Unknown/missing targets, stale revisions and invalid payloads
+fail without partial mutation. Both operations enter the existing reversible Core history.
+
+Desktop bridge 1.6 exposes only named `editHistory({ direction: 'undo' | 'redo', expectedRevision })`.
+Main validates sender/payload/revision, refuses operations while file I/O is pending, and adopts Core
+undo/redo at a fresh revision. History is session-only and resets on reopen/closed-session teardown.
+Native input undo stays local; document shortcuts only run outside text/form inputs. No external
+Agent edit capability is granted. CLI remains a headless Core demonstration, not a live editor API.

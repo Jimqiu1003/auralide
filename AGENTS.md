@@ -9,7 +9,7 @@
 - Architecture: Local-first, modular monorepo
 - License: Apache-2.0
 - Repository: public, <https://github.com/Jimqiu1003/auralide> (owner decision, 2026-10-15)
-- Development stage: P2A experimental Durable Document Foundation (on unmerged P1.5)
+- Development stage: M2 Desktop Preview candidate; Owner/manual acceptance pending
 - Project root: `D:\01_Projects\01_MyProjects\Auralide Dev`
 - Development team: Project Owner / Lead Engineer and Compatibility & QA Engineer
   (see `docs/agents/COLLABORATION.md`)
@@ -24,6 +24,17 @@ Build an AI-native presentation editor combining:
 4. Reliable local storage, version history and future export capabilities.
 
 The editor must not treat raw HTML as the sole source of document truth.
+
+### Current owner-authorized execution (2026-10-18)
+
+The owner requested execution of `docs/architecture/next-stage-plan.md` and a usable Windows x64
+portable EXE. M0 corrections are merged through #20/#21/#23. The isolated `feat/stable-portable`
+candidate migrates the final A2/file workflows and adds bounded basic properties/order, session
+undo/redo, basic presentation and tested portable packaging. These current instructions supersede
+the historical P1/P2A scope restrictions below only for that plan. ADR-0005/0006 remain Proposed;
+no full persistent history, arbitrary script execution, external Agent Apply, release publishing or
+third-party plugin installation is authorized. Keep #24/#25 as historical Drafts. M3/M4 remain later
+gates, not permission for this execution to grow without bounds. Continue sequentially without sub-agents.
 
 ## 2. Architecture Principles
 

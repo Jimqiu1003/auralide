@@ -12,8 +12,14 @@ export const IPC = {
   /** Validated echo used to prove the renderer can reach the main process safely. */
   ping: 'auralide:ping',
   getDocument: 'auralide:get-document',
+  getDocumentStatus: 'auralide:get-document-status',
   applyCommand: 'auralide:apply-command',
+  editHistory: 'auralide:edit-history',
   saveDocument: 'auralide:save-document',
+  newDocument: 'auralide:new-document',
+  saveDocumentAs: 'auralide:save-document-as',
+  importHtml: 'auralide:import-html',
+  exportHtml: 'auralide:export-html',
   openDocument: 'auralide:open-document',
   auraInvoke: 'auralide:aura-invoke',
   auraBounds: 'auralide:aura-bounds',
@@ -28,4 +34,4 @@ export const IPC_ALLOW_LIST: readonly IpcChannel[] = Object.freeze(Object.values
 export const BRIDGE_GLOBAL = 'auralide';
 
 /** Version of the bridge surface itself; bumped when the exposed API shape changes. */
-export const BRIDGE_VERSION = '1.3.0';
+export const BRIDGE_VERSION = '1.6.0';

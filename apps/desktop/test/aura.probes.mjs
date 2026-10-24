@@ -38,13 +38,39 @@ export async function auraProbes(app, page, mode, artifacts, check) {
   };
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.getByTestId('aura-render').click();
+  // Canvas-first Demo puts Aura below the editor. The native guest must be wholly in view.
+  await page.getByTestId('aura-surface').evaluate((element) => {
+    element.scrollIntoView({ block: 'center', inline: 'nearest' });
+  });
   await page.waitForFunction(() =>
     document.querySelector('[data-testid="aura-result"]')?.textContent?.includes('"slide-preview"'),
   );
   const rendered = JSON.parse(await page.getByTestId('aura-result').textContent());
   check('Aura render succeeds', rendered.ok, true);
   const tab = rendered.value;
-  await wait(async () => (await snapshot())[0]?.visible === true, 'visible native preview');
+  try {
+    await wait(async () => (await snapshot())[0]?.visible === true, 'visible native preview');
+  } catch (error) {
+    const geometry = await page.getByTestId('aura-surface').evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        height: rect.height,
+        viewportWidth: element.ownerDocument.defaultView?.innerWidth ?? 0,
+        viewportHeight: element.ownerDocument.defaultView?.innerHeight ?? 0,
+        hidden: document.hidden,
+        scrollY: element.ownerDocument.defaultView?.scrollY ?? 0,
+      };
+    });
+    throw new Error(
+      `${String(error)}; geometry=${JSON.stringify(geometry)}; guests=${JSON.stringify(await snapshot())}`,
+      { cause: error },
+    );
+  }
   const views = await snapshot();
   check('Aura uses one native view', views.length, 1);
   check('Aura session isolated from editor', views[0].isolated, true);
@@ -170,6 +196,7 @@ export async function auraProbes(app, page, mode, artifacts, check) {
   );
   await wait(async () => (await snapshot())[0]?.visible === true, 'fallback preview visible');
   check('Aura fallback preview remains visible', (await snapshot())[0].visible, true);
+  await page.getByRole('button', { name: '格式', exact: true }).click();
   await page.getByTestId('document-text-input').fill('Changed after rendering preview.');
   await page.getByTestId('document-apply').click();
   await page.waitForFunction(
