@@ -348,6 +348,32 @@ try {
       .then((s) => [s.dirty, s.fileName]),
     [true, null],
   );
+  // Regression: the inspection window is hidden, and a hidden window throttles
+  // requestAnimationFrame to roughly 1 Hz. The importer used to await two animation frames per
+  // slide, which cost ~2 s per slide from the third slide on (measured: 10.2 s for 7 slides,
+  // against the 12 s import timeout). Larger decks therefore timed out and the editor stayed
+  // empty, which is the "HTML 导入之后什么都没有" report. Eight slides reproduce it reliably.
+  const manySlidePath = join(directory, 'many-slides.html');
+  const manySlideCount = 8;
+  const manySlideSource = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>多页压力</title><style>
+body{margin:0}.slide{position:relative;width:1280px;height:720px;background:#fff;color:#172033;display:none}
+.slide:first-of-type{display:block}h2{position:absolute;left:80px;top:100px;margin:0;font-size:48px}
+.card{position:absolute;left:80px;top:260px;width:420px;height:200px;background:#eef1f7;border-radius:12px}
+.card p{position:absolute;left:24px;top:24px;margin:0;font-size:22px}
+</style></head><body>${Array.from(
+    { length: manySlideCount },
+    (_, index) =>
+      `<section class="slide" data-title="压力页 ${index + 1}"><h2>第 ${index + 1} 页 · 导入时限</h2><div class="card"><p>第 ${index + 1} 页正文</p></div></section>`,
+  ).join('')}</body></html>`;
+  await writeFile(manySlidePath, manySlideSource);
+  await dialogs(manySlidePath, jsonPath);
+  const bulkStarted = Date.now();
+  const bulk = await invoke('importHtml');
+  const bulkElapsed = Date.now() - bulkStarted;
+  check('many-slide HTML import succeeds', bulk.ok);
+  check('many-slide import keeps every page', bulk.value?.document?.slides?.length, manySlideCount);
+  check('many-slide import stays far inside the import timeout', bulkElapsed < 8000);
+  console.log(`many-slide import: ${bulkElapsed} ms for ${manySlideCount} slides`);
   await writeFile(
     join(artifacts, 'file-io.json'),
     JSON.stringify(
